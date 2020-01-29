@@ -1,0 +1,52 @@
+get:
+  summary: Запрос доступных способов совершения перевода
+  description: |
+    Метод отображает доступные способы совершения перевода для указанного типа получателя.
+    Метод не сохраняет состояние на сервере.
+
+    ### Назначение:
+    * Если необходимо узнать возможные способы совершения перевода указанному получателю.
+    * Используется по желанию клиента (необязательный).
+  parameters:
+    - name: amount
+      description: Сумма перевода, десятичное число с фиксированной точкой в строковом представлении.
+      in: query
+      required: true
+      schema:
+        type: string
+        example: '10.00'
+    - name: currency
+      description: ISO-4217 3-alpha символьный код валюты перевода.
+      in: query
+      required: true
+      schema:
+        $ref: 'https://bitbucket-public.yamoney.ru/projects/API/repos/api-guidelines/raw/templates/common/domain-monetary.yaml?at=refs%2Fheads%2Ffeature%2Fbundle-part#/components/schemas/CurrencyCode'
+  responses:
+    '200':
+      description: |
+        Список доступных способов совершения перевода.
+        Если нет ни одного подходящего способа, список будет пустым.
+        Каждый элемент списка содержит тип источника совершения перевода (SourceType) и список способов подтверждения перевода (СonfirmationType).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              items:
+                description: Доступные способы совершения перевода
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '../test-normalization.yml#/components/schemas/TransferOption'
+            required:
+              - items
+    '400':
+      $ref: '../domain/TechnicalError.yml#/components/responses/ArgumentsError'
+    '401':
+      $ref: '../domain/TechnicalError.yml#/components/responses/AuthenticationError'
+    '403':
+      $ref: '../domain/TechnicalError.yml#/components/responses/PermissionsError'
+    '429':
+      $ref: '../domain/TechnicalError.yml#/components/responses/TooManyRequestsError'
+    '500':
+      $ref: '../domain/TechnicalError.yml#/components/responses/TechnicalError'
