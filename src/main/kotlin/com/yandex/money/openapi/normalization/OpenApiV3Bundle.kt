@@ -11,7 +11,11 @@ import com.github.fge.jsonschema.core.ref.JsonRef
 import org.apache.commons.io.IOUtils
 import java.net.URI
 
-class OpenApiBundle(private val fileName: URI) {
+/**
+ * Класс для сборки спецификации из нескольких файлов
+ * @param fileName путь до корневого файла спецификации
+ */
+class OpenApiV3Bundle(private val fileName: URI) {
 
     private val refKey: String = "\$ref"
     private val components: String = "components"
@@ -36,13 +40,23 @@ class OpenApiBundle(private val fileName: URI) {
         var conflictingTypeNames: MutableMap<JsonPointer, MutableSet<JsonRef>> = mutableMapOf()
     }
 
+    /**
+     * Результат сборки спецификации
+     *
+     * @param bundledSpecification текст собранной спецификации
+     * @param conflictingTypeNames перечень всех конфликтов в формате: указатель на место в корневой спецификации, в которое пытались
+     * добавить тип - список ссылок на типы, которые пытались добавить в это место корневой спецификации
+     */
     data class Result(val bundledSpecification: String?, val conflictingTypeNames: MutableMap<JsonPointer, MutableSet<JsonRef>>)
 
     /**
      * Производит нормализацию спецификации:
-     * все http ссылки на типы помещает в соответствующие части components
-     * менят ссылки на части
-     * Возвращаем нормализованный документ
+     * * инлайнит ссылки на команды
+     * * ссылки на типы, расположенные в других документах, помещает в соответствующие части блока components корневой спецификации,
+     * меняет ссылку с определения типа в другом документе на определение в текущем документе
+     * * Проверяет наличие конфликтов. Конфликтом считается попытка добавить в документ типы с одинаковым названием из разных источников
+     * * Возвращает результат сборки: в случае успеха возвращает текст собранной спецификации,
+     *    при наличии конфликтов, текст собранной спецификации отсутствует, в списке ошибок возвращается перечень всех конфликтов
      */
     fun bundle(): Result {
 
@@ -141,9 +155,7 @@ class OpenApiBundle(private val fileName: URI) {
         }
     }
 
-    private fun loadContent(location: URI): String {
-        return IOUtils.toString(location)
-    }
+    private fun loadContent(location: URI): String = IOUtils.toString(location)
 
     private fun getTreeOrLoadAndCache(jsonRef: JsonRef): JsonNode {
         val jsonNode: JsonNode? = collectedData.remoteRefContent[jsonRef]
