@@ -20,7 +20,7 @@ get:
       in: query
       required: true
       schema:
-        $ref: 'https://bitbucket-public.yamoney.ru/projects/API/repos/api-guidelines/raw/templates/common/domain-monetary.yaml?at=refs%2Fheads%2Ffeature%2Fbundle-part#/components/schemas/CurrencyCode'
+        $ref: 'http://localhost:8888/domain.yml#/components/schemas/CurrencyCode'
   responses:
     '200':
       description: |
@@ -37,16 +37,16 @@ get:
                 type: array
                 items:
                   oneOf:
-                    - $ref: '../test-normalization.yml#/components/schemas/TransferOption'
+                    - $ref: '../specification.yml#/components/schemas/TransferOption'
             required:
               - items
     '400':
-      $ref: '../domain/TechnicalError.yml#/components/responses/ArgumentsError'
+      $ref: '../domain/Domain.yml#/components/responses/ArgumentsError'
     '401':
-      $ref: '../domain/TechnicalError.yml#/components/responses/AuthenticationError'
+      $ref: '../domain/Domain.yml#/components/responses/AuthenticationError'
     '403':
-      $ref: '../domain/TechnicalError.yml#/components/responses/PermissionsError'
+      $ref: '../domain/Domain.yml#/components/responses/PermissionsError'
     '429':
-      $ref: '../domain/TechnicalError.yml#/components/responses/TooManyRequestsError'
+      $ref: '../domain/Domain.yml#/components/responses/TooManyRequestsError'
     '500':
-      $ref: '../domain/TechnicalError.yml#/components/responses/TechnicalError'
+      $ref: '../domain/Domain.yml#/components/responses/TechnicalError'

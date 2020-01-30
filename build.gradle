@@ -13,5 +13,8 @@ dependencies {
             'commons-io:commons-io:2.4',
             'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.0'
 
-    testCompile 'junit:junit:4.12'
+    testCompile 'junit:junit:4.12',
+            "com.github.tomakehurst:wiremock:2.20.0"
+
 }
+

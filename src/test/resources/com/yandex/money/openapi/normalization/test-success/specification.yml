@@ -1,0 +1,188 @@
+openapi: "3.0.2"
+info:
+  version: "1.0.0"
+  title: PetStore API Project Template
+  description: |
+    # Шаблон спецификации - пример описания
+
+    ## Глоссарий основных сущностей сервиса:
+
+    * Transfer - перевод в системе Яндекс.Деньги. Отражает атрибуты и состояние перевода. Идентификатор перевода (TransferId) является первичной ссылкой на все последующие процессы. Для совершения перевода следует указать Откуда, Кому, Сколько и Как.
+    * Source - платежные данные отправителя перевода, источник средств ("Откуда"). Наследники этого типа представляют реализации конкретных источников перевода (кошелек, банковская карта, etc).
+    * Recipient - получатель перевода, данные о получателе перевода ("Кому"). Наследники этого типа представляют реализации конкретных получателей перевода (номер кошелька, номер телефона, номер банковской карты, etc).
+    * MonetaryAmount - определение суммы в указанной валюте ("Сколько"). Мы не говорим "заплати 100", мы используем термин "заплати 100 рублей".
+    * Confirmation - пользовательский процесс подтверждения перевода ("Как"). Наследники этого типа представляют реализации конкретных процессов подтверждения перевода (редирект на страницы 3-D Secure, redirectUrl).
+
+    ## Сценарий совершения перевода:
+
+    * (Опционально) По данным получателя и суммы перевода получить список доступных способов перевода (GET /transfer-options).
+    * Токенизировать платежные данные перевода, сформировать контекст (POST /tokens, ответ содержит transferToken).
+    * Упорно провести пользовательский процесс перевода по значению transferToken (POST /transfers). Клиент повторяет этот запрос при любых неясных ситуациях, в том числе при ожидании завершения аутентификации 3-D Secure.
+
+  contact:
+    name: Author Name
+    email: author@yandex-team.ru
+
+servers:
+  - url: https://payment.yandex.net/template-api/v1
+
+security:
+  - OAuth2Wallet:
+      - account-info
+
+paths:
+
+  /transfers:
+    $ref: 'commands/transfers.yml'
+
+  /transfer-options:
+    $ref: 'commands/transfer-options.yml'
+
+  /tokens:
+    $ref: 'commands/tokens.yml'
+
+
+components:
+
+  securitySchemes:
+
+    OAuth2Wallet:
+      description: OAuth2 авторизация кошелька Яндекс.Деньги
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://money.yandex.ru/oauth/authorize
+          tokenUrl: https://money.yandex.ru/oauth/token
+          scopes:
+            account-info: Информация о состоянии кошелька
+
+  schemas:
+
+    ConfirmationType:
+      description: |
+        Тип пользовательского процесса подтверждения перевода:
+        * Redirect - необходимо направить пользователя на веб-страницу.
+      type: string
+      enum:
+        - Redirect
+      example: Redirect
+
+    TransferStatus:
+      description: |
+        Статус перевода:
+
+        * Pending - Перевод ожидает подтверждения или иных действий отправителя.
+        * Sent - Перевод успешно отправлен получателю и ожидает приёма.
+        * Delivered - Перевод успешно завершен, доставлен получателю.
+        * Canceled - В проведении перевода отказано, перевод отвергнут получателем или срок его приема истёк.
+
+        Возможные последовательности переходов состояний:
+
+        * Pending -> (Sent, Delivered, Canceled)
+        * Sent -> (Delivered, Canceled)
+        * Delivered и Canceled это финальные состояния
+      type: string
+      enum:
+        - Pending
+        - Sent
+        - Delivered
+        - Canceled
+      example: Delivered
+
+    TransferErrorType:
+      description: >
+        Причина отказа в проведении перевода или его отмены.
+
+        * InsufficientFunds - Недостаточно средств для совершения перевода.
+
+        * LimitExceeded - Превышен один из лимитов на операции:
+
+          * на сумму операции для выданного токена авторизации;
+          * сумму операций за период времени для выданного токена авторизации;
+          * ограничений платежной системы для различных видов операций.
+
+        * IdentificationRequired - Для проведения перевода требуется идентификация отправителя.
+
+        * SimplifiedIdentificationRequired - Для проведения перевода требуется упрощенная идентификация отправителя.
+
+        * TransferExpired - Истек срок, отведенный для приема перевода получателем. Перевод возвращен отправителю.
+
+        * TransferDeclined - В проведении перевода отказано. Generic ошибка для всех остальных отказов в проведении перевода.
+
+      type: string
+      enum:
+        - InsufficientFunds
+        - LimitExceeded
+        - IdentificationRequired
+        - SimplifiedIdentificationRequired
+        - TransferExpired
+        - TransferDeclined
+      example: 'InsufficientFunds'
+
+    TransferError:
+      description: Отказ в проведении перевода или причина его отмены.
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TransferErrorType'
+      discriminator:
+        propertyName: type
+      required:
+        - type
+
+    TransferId:
+      description: Идентификатор перевода
+      type: string
+      minLength: 36
+      maxLength: 36
+      example: '1da5c87d-0984-50e8-a7f3-8de646dd9ec9'
+
+    Transfer:
+      description: Перевод в системе Яндекс.Деньги.
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/TransferId'
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        error:
+          allOf:
+            - $ref: '#/components/schemas/TransferError'
+            - description: Причина отказа в проведении перевода или его отмены. Присутствует при status=Canceled.
+      required:
+        - id
+        - status
+
+    TransferToken:
+      description: |
+        Одноразовый токен для проведения перевода, имеет ограниченный срок действия.
+      type: string
+      maxLength: 200
+      example: '+u7PDjMTkf08NtD66P6+eYWa2yjU3gsSIhOOO+OWsOg='
+
+    Fee:
+      description: Комиссия с отправителя сверх суммы перевода.
+      type: object
+      properties:
+        service:
+          $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+        counterparty:
+          $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+      required:
+        - service
+        - counteragent
+
+    TransferOption:
+      description: Определение способа совершения перевода.
+      type: object
+      properties:
+        charge:
+          allOf:
+            - $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+            - description: MonetaryAmount, сумма к оплате отправителем.
+        fee:
+          allOf:
+            - $ref: '#/components/schemas/Fee'
+            - description: Комиссия с отправителя сверх суммы перевода. Поле присутствует в случае наличия комиссий сверх суммы перевода.
+      required:
+        - charge

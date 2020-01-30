@@ -1,0 +1,40 @@
+# Домен работы с денежными и бонусными единицами
+
+info:
+  version: "1.0.0"
+
+components:
+  schemas:
+
+    CurrencyCode:
+      description: Код валюты, ISO-4217 3-alpha currency symbol.
+      type: string
+      pattern: "[A-Z]{3}"
+      example: 'RUB'
+
+    Amount:
+      description: Числовое значение, для сумм без валюты, например для бонусных баллов.
+      type: object
+      properties:
+        value:
+          description: Десятичное число с фиксированной точкой в строковом представлении.
+          type: string
+          pattern: "(\\d+\\.\\d{2}|\\d+)"
+          example: '100.00'
+      required:
+        - value
+
+    MonetaryAmount:
+      description: Сумма в выбранной валюте.
+      type: object
+      properties:
+        value:
+          description: Сумма, десятичное число с фиксированной точкой в строковом представлении.
+          type: string
+          pattern: "(\\d+\\.\\d{2}|\\d+)"
+          example: '10.00'
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+      required:
+        - value
+        - currency

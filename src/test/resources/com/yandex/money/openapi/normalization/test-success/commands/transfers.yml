@@ -11,7 +11,7 @@ post:
           type: object
           properties:
             transferToken:
-              $ref: '../test-normalization.yml#/components/schemas/TransferToken'
+              $ref: '../specification.yml#/components/schemas/TransferToken'
           required:
             - transferToken
   responses:
@@ -20,16 +20,16 @@ post:
       content:
         application/json:
           schema:
-            $ref: '../test-normalization.yml#/components/schemas/Transfer'
+            $ref: '../specification.yml#/components/schemas/Transfer'
     '202':
-      $ref: '../domain/TechnicalError.yml#/components/responses/Accepted'
+      $ref: '../domain/Domain.yml#/components/responses/Accepted'
     '400':
-      $ref: '../domain/TechnicalError.yml#/components/responses/ArgumentsError'
+      $ref: '../domain/Domain.yml#/components/responses/ArgumentsError'
     '401':
-      $ref: '../domain/TechnicalError.yml#/components/responses/AuthenticationError'
+      $ref: '../domain/Domain.yml#/components/responses/AuthenticationError'
     '403':
-      $ref: '../domain/TechnicalError.yml#/components/responses/PermissionsError'
+      $ref: '../domain/Domain.yml#/components/responses/PermissionsError'
     '429':
-      $ref: '../domain/TechnicalError.yml#/components/responses/TooManyRequestsError'
+      $ref: '../domain/Domain.yml#/components/responses/TooManyRequestsError'
     '500':
-      $ref: '../domain/TechnicalError.yml#/components/responses/TechnicalError'
+      $ref: '../domain/Domain.yml#/components/responses/TechnicalError'

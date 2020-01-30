@@ -165,9 +165,9 @@ components:
       type: object
       properties:
         service:
-          $ref: 'https://bitbucket-public.yamoney.ru/projects/API/repos/api-guidelines/raw/templates/common/domain-monetary.yaml?at=refs%2Fheads%2Ffeature%2Fbundle-part#/components/schemas/MonetaryAmount'
+          $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
         counterparty:
-          $ref: 'https://bitbucket-public.yamoney.ru/projects/API/repos/api-guidelines/raw/templates/common/domain-monetary.yaml?at=refs%2Fheads%2Ffeature%2Fbundle-part#/components/schemas/MonetaryAmount'
+          $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
       required:
         - service
         - counteragent
@@ -178,7 +178,7 @@ components:
       properties:
         charge:
           allOf:
-            - $ref: 'https://bitbucket-public.yamoney.ru/projects/API/repos/api-guidelines/raw/templates/common/domain-monetary.yaml?at=refs%2Fheads%2Ffeature%2Fbundle-part#/components/schemas/MonetaryAmount'
+            - $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
             - description: MonetaryAmount, сумма к оплате отправителем.
         fee:
           allOf:
@@ -186,3 +186,59 @@ components:
             - description: Комиссия с отправителя сверх суммы перевода. Поле присутствует в случае наличия комиссий сверх суммы перевода.
       required:
         - charge
+
+    PermissionsError:
+      description: |
+        Запрос не может быть выполнен — Клиент не обладает достаточными правами, или состояние учетной записи клиента не позволяет совершить операцию.
+
+        Коды ошибок:
+        * InvalidScope - Указанная авторизация клиента не обладает достаточными правами для совершения этой операции.
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - InvalidScope
+          example: InvalidScope
+      required:
+        - type
+
+  responses:
+
+    TechnicalError:
+      description: |
+        Техническая ошибка. Результат выполнения запроса неизвестен.
+        Клиенту следует повторить запрос с теми же аргументами спустя указанное время ожидания.
+
+        Коды ошибок:
+        * TechnicalError - Техническая ошибка сервиса.
+        * ServiceUnavailable - Сервис временно недоступен.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  type:
+                    description: Код ошибки
+                    type: string
+                    enum:
+                      - TechnicalError
+                      - ServiceUnavailable
+                    example: TechnicalError
+                  retryAfter:
+                    description: Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос.
+                    type: integer
+                    format: int64
+                    example: 5000
+                    minimum: 10
+                  description:
+                    description: Дополнительное текстовое пояснение причины ошибки. Может присутствовать в некоторых случаях.
+                    type: string
+                    example: 'Съешь еще этих мягких французских булок'
+                required:
+                  - type
+            required:
+              - error
