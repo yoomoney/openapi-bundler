@@ -1,0 +1,35 @@
+post:
+  summary: Проведение перевода
+  description: |
+    Проведение перевода, включая процессы подтверждения перевода отправителем.
+    Метод идемпотентен по значению transferToken.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            transferToken:
+              $ref: '../specification_with_conflicts.yaml#/components/schemas/TransferToken'
+          required:
+            - transferToken
+  responses:
+    '200':
+      description: Запрос успешно выполнен. Результат и шаг процесса проведения перевода отражает значение поля status ответа.
+      content:
+        application/json:
+          schema:
+            $ref: '../specification_with_conflicts.yaml#/components/schemas/Transfer'
+    '202':
+      $ref: '../domain/Domain.yaml#/components/responses/Accepted'
+    '400':
+      $ref: '../domain/Domain.yaml#/components/responses/ArgumentsError'
+    '401':
+      $ref: '../domain/Domain.yaml#/components/responses/AuthenticationError'
+    '403':
+      $ref: '../domain/Domain.yaml#/components/responses/PermissionsError'
+    '429':
+      $ref: '../domain/Domain.yaml#/components/responses/TooManyRequestsError'
+    '500':
+      $ref: '../domain/Domain.yaml#/components/responses/TechnicalError'

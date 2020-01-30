@@ -1,0 +1,52 @@
+get:
+  summary: Запрос доступных способов совершения перевода
+  description: |
+    Метод отображает доступные способы совершения перевода для указанного типа получателя.
+    Метод не сохраняет состояние на сервере.
+
+    ### Назначение:
+    * Если необходимо узнать возможные способы совершения перевода указанному получателю.
+    * Используется по желанию клиента (необязательный).
+  parameters:
+    - name: amount
+      description: Сумма перевода, десятичное число с фиксированной точкой в строковом представлении.
+      in: query
+      required: true
+      schema:
+        type: string
+        example: '10.00'
+    - name: currency
+      description: ISO-4217 3-alpha символьный код валюты перевода.
+      in: query
+      required: true
+      schema:
+        $ref: 'http://localhost:8888/domain.yaml#/components/schemas/CurrencyCode'
+  responses:
+    '200':
+      description: |
+        Список доступных способов совершения перевода.
+        Если нет ни одного подходящего способа, список будет пустым.
+        Каждый элемент списка содержит тип источника совершения перевода (SourceType) и список способов подтверждения перевода (СonfirmationType).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              items:
+                description: Доступные способы совершения перевода
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '../specification.yaml#/components/schemas/TransferOption'
+            required:
+              - items
+    '400':
+      $ref: '../domain/Domain.yaml#/components/responses/ArgumentsError'
+    '401':
+      $ref: '../domain/Domain.yaml#/components/responses/AuthenticationError'
+    '403':
+      $ref: '../domain/Domain.yaml#/components/responses/PermissionsError'
+    '429':
+      $ref: '../domain/Domain.yaml#/components/responses/TooManyRequestsError'
+    '500':
+      $ref: '../domain/Domain.yaml#/components/responses/TechnicalError'
