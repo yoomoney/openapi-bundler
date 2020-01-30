@@ -25,28 +25,28 @@ class OpenApiBundleTest {
 
     @Test
     fun should_success_bundle() {
-        wireMockRule.stubFor(get(urlEqualTo("/domain.yml"))
-            .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yml")))))
+        wireMockRule.stubFor(get(urlEqualTo("/domain.yaml"))
+            .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yaml")))))
 
-        val fileName = this.javaClass.getResource("test-success/specification.yml")
+        val fileName = this.javaClass.getResource("test-success/specification.yaml")
         val bundledSpecification = OpenApiBundle(fileName.toURI()).bundle().bundledSpecification
         val bundleTree = mapper.readTree(bundledSpecification)
 
-        val expectedResultFileName = this.javaClass.getResource("test-success/specification_expected_result.yml")
+        val expectedResultFileName = this.javaClass.getResource("test-success/specification_expected_result.yaml")
         val expectedTree = mapper.readTree(IOUtils.toString(expectedResultFileName))
         Assert.assertEquals(bundleTree, expectedTree)
     }
 
     @Test
     fun should_get_errors() {
-        wireMockRule.stubFor(get(urlEqualTo("/domain.yml"))
-            .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yml")))))
+        wireMockRule.stubFor(get(urlEqualTo("/domain.yaml"))
+            .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yaml")))))
 
-        val fileName = this.javaClass.getResource("test-conflicts/specification_with_conflicts.yml")
+        val fileName = this.javaClass.getResource("test-conflicts/specification_with_conflicts.yaml")
         val conflictingTypeNames = OpenApiBundle(fileName.toURI()).bundle().conflictingTypeNames
         Assert.assertTrue(conflictingTypeNames[JsonPointer.of("components", "responses", "TechnicalError")]?.first().toString().endsWith(
-            "domain/Domain.yml#/components/responses/TechnicalError"))
+            "domain/Domain.yaml#/components/responses/TechnicalError"))
         Assert.assertTrue(conflictingTypeNames[JsonPointer.of("components", "schemas", "PermissionsError")]?.first().toString().endsWith(
-            "domain/Domain.yml#/components/schemas/PermissionsError"))
+            "domain/Domain.yaml#/components/schemas/PermissionsError"))
     }
 }

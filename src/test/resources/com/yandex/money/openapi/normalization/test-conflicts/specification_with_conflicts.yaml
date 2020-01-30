@@ -33,13 +33,13 @@ security:
 paths:
 
   /transfers:
-    $ref: 'commands/transfers.yml'
+    $ref: 'commands/transfers.yaml'
 
   /transfer-options:
-    $ref: 'commands/transfer-options.yml'
+    $ref: 'commands/transfer-options.yaml'
 
   /tokens:
-    $ref: 'commands/tokens.yml'
+    $ref: 'commands/tokens.yaml'
 
 
 components:
@@ -165,9 +165,9 @@ components:
       type: object
       properties:
         service:
-          $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+          $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
         counterparty:
-          $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+          $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
       required:
         - service
         - counteragent
@@ -178,7 +178,7 @@ components:
       properties:
         charge:
           allOf:
-            - $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+            - $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
             - description: MonetaryAmount, сумма к оплате отправителем.
         fee:
           allOf:

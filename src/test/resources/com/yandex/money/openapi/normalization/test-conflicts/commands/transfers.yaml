@@ -11,7 +11,7 @@ post:
           type: object
           properties:
             transferToken:
-              $ref: '../specification_with_conflicts.yml#/components/schemas/TransferToken'
+              $ref: '../specification_with_conflicts.yaml#/components/schemas/TransferToken'
           required:
             - transferToken
   responses:
@@ -20,16 +20,16 @@ post:
       content:
         application/json:
           schema:
-            $ref: '../specification_with_conflicts.yml#/components/schemas/Transfer'
+            $ref: '../specification_with_conflicts.yaml#/components/schemas/Transfer'
     '202':
-      $ref: '../domain/Domain.yml#/components/responses/Accepted'
+      $ref: '../domain/Domain.yaml#/components/responses/Accepted'
     '400':
-      $ref: '../domain/Domain.yml#/components/responses/ArgumentsError'
+      $ref: '../domain/Domain.yaml#/components/responses/ArgumentsError'
     '401':
-      $ref: '../domain/Domain.yml#/components/responses/AuthenticationError'
+      $ref: '../domain/Domain.yaml#/components/responses/AuthenticationError'
     '403':
-      $ref: '../domain/Domain.yml#/components/responses/PermissionsError'
+      $ref: '../domain/Domain.yaml#/components/responses/PermissionsError'
     '429':
-      $ref: '../domain/Domain.yml#/components/responses/TooManyRequestsError'
+      $ref: '../domain/Domain.yaml#/components/responses/TooManyRequestsError'
     '500':
-      $ref: '../domain/Domain.yml#/components/responses/TechnicalError'
+      $ref: '../domain/Domain.yaml#/components/responses/TechnicalError'

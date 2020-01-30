@@ -13,7 +13,7 @@ post:
           properties:
             amount:
               allOf:
-                - $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+                - $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
                 - description: Сумма перевода, сумма к получению.
             message:
               description: Сообщение получателю, можно указать для перевода любого типа кроме пополнения собственного кошелька.
@@ -30,14 +30,14 @@ post:
             type: object
             properties:
               transferToken:
-                $ref: '../specification.yml#/components/schemas/TransferToken'
+                $ref: '../specification_with_conflicts.yaml#/components/schemas/TransferToken'
               charge:
                 allOf:
-                  - $ref: 'http://localhost:8888/domain.yml#/components/schemas/MonetaryAmount'
+                  - $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
                   - description: MonetaryAmount, сумма к оплате отправителем.
               fee:
                 allOf:
-                  - $ref: '../specification.yml#/components/schemas/Fee'
+                  - $ref: '../specification_with_conflicts.yaml#/components/schemas/Fee'
                   - description: Комиссия с отправителя сверх суммы перевода. Поле присутствует в случае наличия комиссий сверх суммы перевода.
             required:
               - transferToken
@@ -50,7 +50,7 @@ post:
             properties:
               error:
                 oneOf:
-                  - $ref: '../domain/Domain.yml#/components/schemas/ArgumentsError'
+                  - $ref: '../domain/Domain.yaml#/components/schemas/ArgumentsError'
                   - title: ValidationRulesViolationError
                     description: >
                       Перевод с указанными параметрами не может быть совершен:
@@ -83,7 +83,7 @@ post:
             required:
               - error
     '401':
-      $ref: '../domain/Domain.yml#/components/responses/AuthenticationError'
+      $ref: '../domain/Domain.yaml#/components/responses/AuthenticationError'
     '403':
       description: Ответ о запрете выполнения запроса.
       content:
@@ -93,7 +93,7 @@ post:
             properties:
               error:
                 oneOf:
-                  - $ref: '../domain/Domain.yml#/components/schemas/PermissionsError'
+                  - $ref: '../domain/Domain.yaml#/components/schemas/PermissionsError'
                   - title: AuthenticationRulesViolationError
                     description: >
                       Перевод с указанного кошелька не может быть совершен:
@@ -128,6 +128,6 @@ post:
             required:
               - error
     '429':
-      $ref: '../domain/Domain.yml#/components/responses/TooManyRequestsError'
+      $ref: '../domain/Domain.yaml#/components/responses/TooManyRequestsError'
     '500':
-      $ref: '../domain/Domain.yml#/components/responses/TechnicalError'
+      $ref: '../domain/Domain.yaml#/components/responses/TechnicalError'

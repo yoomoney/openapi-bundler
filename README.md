@@ -2,7 +2,7 @@
 
 ## Описание
 
-Библиотека для сборки несколькоих OpenApi v3 спецификаций в один файл.
+Библиотека для сборки нескольких OpenApi v3 спецификаций в один файл.
 
 ## Использование
 
@@ -11,7 +11,7 @@
 ```java
 class Application {
     public static void main(String[] args) {
-       ...
+       OpenApiBundle.Result result = OpenApiBundle(fileName.toURI()).bundle();
     }
 }
 ```

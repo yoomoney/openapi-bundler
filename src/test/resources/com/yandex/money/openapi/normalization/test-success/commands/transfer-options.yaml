@@ -20,7 +20,7 @@ get:
       in: query
       required: true
       schema:
-        $ref: 'http://localhost:8888/domain.yml#/components/schemas/CurrencyCode'
+        $ref: 'http://localhost:8888/domain.yaml#/components/schemas/CurrencyCode'
   responses:
     '200':
       description: |
@@ -37,16 +37,16 @@ get:
                 type: array
                 items:
                   oneOf:
-                    - $ref: '../specification.yml#/components/schemas/TransferOption'
+                    - $ref: '../specification.yaml#/components/schemas/TransferOption'
             required:
               - items
     '400':
-      $ref: '../domain/Domain.yml#/components/responses/ArgumentsError'
+      $ref: '../domain/Domain.yaml#/components/responses/ArgumentsError'
     '401':
-      $ref: '../domain/Domain.yml#/components/responses/AuthenticationError'
+      $ref: '../domain/Domain.yaml#/components/responses/AuthenticationError'
     '403':
-      $ref: '../domain/Domain.yml#/components/responses/PermissionsError'
+      $ref: '../domain/Domain.yaml#/components/responses/PermissionsError'
     '429':
-      $ref: '../domain/Domain.yml#/components/responses/TooManyRequestsError'
+      $ref: '../domain/Domain.yaml#/components/responses/TooManyRequestsError'
     '500':
-      $ref: '../domain/Domain.yml#/components/responses/TechnicalError'
+      $ref: '../domain/Domain.yaml#/components/responses/TechnicalError'
