@@ -13,7 +13,7 @@ import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 
-class OpenApiV3BundleTest {
+class OpenApiV3SpecificationBundleTest {
 
     @Rule
     @JvmField
@@ -29,7 +29,7 @@ class OpenApiV3BundleTest {
             .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yaml")))))
 
         val fileName = this.javaClass.getResource("test-success/specification.yaml")
-        val bundledSpecification = OpenApiV3Bundle(fileName.toURI()).bundle().bundledSpecification
+        val bundledSpecification = OpenApiV3SpecificationBundle(fileName.toURI()).bundle().bundledSpecification
         val bundleTree = mapper.readTree(bundledSpecification)
 
         val expectedResultFileName = this.javaClass.getResource("test-success/specification_expected_result.yaml")
@@ -43,7 +43,7 @@ class OpenApiV3BundleTest {
             .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yaml")))))
 
         val fileName = this.javaClass.getResource("test-conflicts/specification_with_conflicts.yaml")
-        val conflictingTypeNames = OpenApiV3Bundle(fileName.toURI()).bundle().conflictingTypeNames
+        val conflictingTypeNames = OpenApiV3SpecificationBundle(fileName.toURI()).bundle().conflictingTypeNames
         Assert.assertTrue(conflictingTypeNames[JsonPointer.of("components", "responses", "TechnicalError")]?.first().toString().endsWith(
             "domain/Domain.yaml#/components/responses/TechnicalError"))
         Assert.assertTrue(conflictingTypeNames[JsonPointer.of("components", "schemas", "PermissionsError")]?.first().toString().endsWith(

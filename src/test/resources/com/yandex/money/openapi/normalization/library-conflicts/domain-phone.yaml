@@ -1,0 +1,17 @@
+# Домен работы с номерами телефонов
+info:
+  version: "1.0.0"
+
+components:
+  schemas:
+    Phone:
+      description: Номер телефона в формате ITU-T E.164
+      type: string
+      pattern: "[0-9]{4,15}"
+      example: '79000000000'
+
+    Number:
+      description: Номер банковской карты.
+      type: string
+      pattern: '[0-9]{16,19}'
+      example: '5105105105105100'

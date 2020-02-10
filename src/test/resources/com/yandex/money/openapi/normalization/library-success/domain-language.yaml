@@ -1,0 +1,17 @@
+# Домен работы с языком
+
+info:
+  version: "1.0.0"
+
+components:
+  parameters:
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      example: 'en'
+      description: >-
+        Код языка, на котором клиент хочет получить ответ, в соответствии с:
+          - [RFC-5646: Tags for Identifying Languages](https://tools.ietf.org/html/rfc2616#section-14.4)
+          - [IANA Language Subtag Registry](http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry)
+      schema:
+        type: string

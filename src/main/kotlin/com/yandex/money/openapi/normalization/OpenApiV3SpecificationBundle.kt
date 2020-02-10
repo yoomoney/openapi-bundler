@@ -15,7 +15,7 @@ import java.net.URI
  * Класс для сборки спецификации из нескольких файлов
  * @param fileName путь до корневого файла спецификации
  */
-class OpenApiV3Bundle(private val fileName: URI) {
+class OpenApiV3SpecificationBundle(private val fileName: URI) {
 
     private val refKey: String = "\$ref"
     private val components: String = "components"
