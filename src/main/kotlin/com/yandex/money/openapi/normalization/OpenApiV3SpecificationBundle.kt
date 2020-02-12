@@ -37,7 +37,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
 
     private class CollectedData {
         var remoteRefContent: MutableMap<JsonRef, JsonNode> = mutableMapOf()
-        var conflictingTypeNames: MutableMap<JsonPointer, MutableSet<JsonRef>> = mutableMapOf()
+        var sourceByParts: MutableMap<JsonPointer, MutableSet<URI>> = mutableMapOf()
     }
 
     /**
@@ -47,7 +47,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
      * @param conflictingTypeNames перечень всех конфликтов в формате: указатель на место в корневой спецификации, в которое пытались
      * добавить тип - список ссылок на типы, которые пытались добавить в это место корневой спецификации
      */
-    data class Result(val bundledSpecification: String?, val conflictingTypeNames: MutableMap<JsonPointer, MutableSet<JsonRef>>)
+    data class Result(val bundledSpecification: String?, val conflictingTypeNames: Map<String, Set<URI>>)
 
     /**
      * Производит нормализацию спецификации:
@@ -67,10 +67,14 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
         processObjectNode(rootNode, baseJsonRef, collectedData)
         fillComponents(rootNode, baseJsonRef, collectedData)
 
-        val bundledSpecification = if (collectedData.conflictingTypeNames.isEmpty())
-            mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode) else null
+        val conflictingNames: Map<String, Set<URI>> = collectedData.sourceByParts
+            .filter { entry -> entry.value.size > 1 }
+            .mapKeys { entry -> entry.key.toString() }
 
-        return Result(bundledSpecification, collectedData.conflictingTypeNames)
+        val bundledSpecification = if (conflictingNames.isEmpty())
+            OpenApiV3LibraryBundle.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode) else null
+
+        return Result(bundledSpecification, conflictingNames)
     }
 
     private fun processObjectNode(
@@ -130,7 +134,18 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
         baseJsonRef: JsonRef,
         collectedData: CollectedData
     ) {
+
+        // заполняем для первого документа
         val targetComponentsJsonNode = findOrCreateObjectNode(components, rootNode as ObjectNode)
+        targetComponentsJsonNode.fields().forEach { entry ->
+            entry.value.fields().forEach { sourceChildEntry ->
+                val currentJsonPointer = JsonPointer.of(components, entry.key, sourceChildEntry.key)
+                val sourceSet: MutableSet<URI> = collectedData.sourceByParts.getOrDefault(currentJsonPointer, mutableSetOf())
+                sourceSet.add(baseJsonRef.locator)
+                collectedData.sourceByParts[currentJsonPointer] = sourceSet
+            }
+        }
+
         collectedData.remoteRefContent.keys.forEach { jsonRef ->
             val refNode: JsonNode = getTreeOrLoadAndCache(jsonRef)
             // Наличие узла components в части документа с определением домена обязательно
@@ -141,13 +156,9 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
                 entry.value.fields().forEach { sourceChildEntry ->
                     val currentJsonPointer = JsonPointer.of(components, entry.key, sourceChildEntry.key)
                     if (jsonRef.pointer == currentJsonPointer) {
-                        val existingJsonNode: JsonNode? = targetComponentsChildNode.get(sourceChildEntry.key)
-                        if (existingJsonNode != null && !jsonRef.contains(baseJsonRef)) {
-                            val existingJsonNodes = collectedData.conflictingTypeNames
-                                .getOrDefault(currentJsonPointer, mutableSetOf())
-                            existingJsonNodes.add(jsonRef)
-                            collectedData.conflictingTypeNames[currentJsonPointer] = existingJsonNodes
-                        }
+                        val sourceSet: MutableSet<URI> = collectedData.sourceByParts.getOrDefault(currentJsonPointer, mutableSetOf())
+                        sourceSet.add(jsonRef.locator)
+                        collectedData.sourceByParts[currentJsonPointer] = sourceSet
                         targetComponentsChildNode.set(sourceChildEntry.key, sourceChildEntry.value)
                     }
                 }
