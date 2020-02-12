@@ -1,5 +1,8 @@
-### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_TYPE=MAJOR
 ### NEXT_VERSION_DESCRIPTION_BEGIN
+* Добавил сборщик библиотеки типов
+* Рефакторинг сборщика спецификации: конфликты возвращаются в виде "указатель на тип - список источников, которые содержат тип с таким  
+ же названием"
 ### NEXT_VERSION_DESCRIPTION_END
 ## [1.1.0]() (07-02-2020)
 

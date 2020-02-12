@@ -1,0 +1,88 @@
+# Домент кеширования
+# Есть 2 сценария работы с кешем, черзе ETag и через дату последней модификации Last-Modified
+info:
+  version: "1.0.0"
+
+components:
+  parameters:
+    IfNoneMatch:
+      in: header
+      required: false
+      name: If-None-Match
+      schema:
+        type: string
+        example: 'sdf12331'
+      description: |
+        [ETag из предыдущего ответа сервера](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match)
+
+    ETag:
+      in: header
+      required: false
+      name: If-None-MatchETag
+      schema:
+        type: string
+        example: 'W/\"b63802dff0dc93a2bc5af99c857a3f909aab95092face001b77ba6742cdb600e\"'
+      description: |
+        Версия (хеш от тела) текущего ответа [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+
+    IfModifiedSince:
+      name: If-Modified-Since
+      in: header
+      description: >-
+        Сохранённое значение Last-Modified. в формате "EEE, dd MMM yyyy HH:mm:ss zz" (https://tools.ietf.org/html/rfc7231#section-7.1.1.1)
+      schema:
+        type: string
+        example: 'Tue, 09 Oct 2015 07:28:20 GMT'
+  schemas:
+
+    Cache-Control:
+      schema:
+        type: string
+        enum:
+          - private
+      description: |
+        Фиксированное значение: private, указание на то что данные должны быть сохранены в кэше клиента и не должны сохраняться на прокси-серверах.
+
+    ETag:
+      schema:
+        type: string
+        example: 'W/\"b63802dff0dc93a2bc5af99c857a3f909aab95092face001b77ba6742cdb600e\"'
+      description: |
+        Версия (хеш от тела) запрашиваемого ресурса [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+    Expires:
+      schema:
+        type: string
+        format: date-time
+        example: 'Tue, 18 Dec 2018 16:12:28 GMT'
+      description: |
+        Время, до достижении которого данные считаются действительными (https://tools.ietf.org/html/rfc7231#section-7.1.1.1).
+
+    Last-Modified:
+      schema:
+        type: string
+        format: date-time
+        example: 'Tue, 08 Dec 2018 16:12:28 GMT'
+      description: |
+        Временная метка последнего изменения сущности (https://tools.ietf.org/html/rfc7231#section-7.1.1.1).
+
+  responses:
+    NotModifiedTime:
+      description: |
+        Запрос выполнен успешно. Данные не изменялись.
+      headers:
+        Cache-Control:
+          $ref: '#/components/schemas/Cache-Control'
+        Expires:
+          $ref: '#/components/schemas/Expires'
+        Last-Modified:
+          $ref: '#/components/schemas/Last-Modified'
+    NotModifiedETag:
+      description: |
+        Запрос выполнен успешно. Данные не изменялись.
+      headers:
+        Cache-Control:
+          $ref: '#/components/schemas/Cache-Control'
+        Expires:
+          $ref: '#/components/schemas/Expires'
+        ETag:
+          $ref: '#/components/schemas/ETag'

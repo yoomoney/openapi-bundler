@@ -1,0 +1,25 @@
+# Домен работы с пагинацией
+info:
+  version: "1.0.0"
+
+components:
+  parameters:
+
+    Limit:
+      name: limit
+      in: query
+      description:  Максимальное количество записей в выдаче.
+      type: number
+      default: '10'
+
+    After:
+      name: after
+      in: query
+      description: Токен запроса следующей страницы данных.
+      type: string
+
+  schemas:
+    After:
+      title: Токен запроса следующей страницы данных.
+      type: string
+      example: '01234567890ABCDEF'
