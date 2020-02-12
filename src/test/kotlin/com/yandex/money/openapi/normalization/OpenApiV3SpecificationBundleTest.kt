@@ -54,7 +54,5 @@ class OpenApiV3SpecificationBundleTest {
             StringEndsWith.endsWith("specification_with_conflicts.yaml#"))
         Assert.assertThat(conflictingTypeNames["/components/schemas/PermissionsError"]!!.toList()[1].toASCIIString(),
             StringEndsWith.endsWith("domain/Domain.yaml#"))
-
-
     }
 }

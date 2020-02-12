@@ -1,14 +1,10 @@
 package com.yandex.money.openapi.normalization
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import com.github.fge.jackson.jsonpointer.JsonPointer
 import com.github.fge.jsonschema.core.ref.JsonRef
-import org.apache.commons.io.IOUtils
 import java.net.URI
 
 /**
@@ -17,53 +13,34 @@ import java.net.URI
  */
 class OpenApiV3LibraryBundle(private val fileNames: Array<URI>) {
 
-    private val refKey: String = "\$ref"
-    private val components: String = "components"
-    private val hash: String = "#"
-
-    companion object {
-        private val yamlFactory = YAMLFactory()
-            .enable(YAMLGenerator.Feature.LITERAL_BLOCK_STYLE)
-            .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
-            .disable(YAMLGenerator.Feature.INDENT_ARRAYS)
-            .disable(YAMLGenerator.Feature.SPLIT_LINES)
-            .disable(YAMLGenerator.Feature.CANONICAL_OUTPUT)
-            .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
-
-        val mapper = ObjectMapper(yamlFactory)
-    }
-
-    private val collectedData = CollectedData()
-
     private class CollectedData {
         var remoteRefContent: MutableMap<JsonRef, JsonNode> = mutableMapOf()
-        var sourceByParts: MutableMap<JsonPointer, MutableSet<URI>> = mutableMapOf()
+        var sourcesOfComponents: MutableMap<JsonPointer, MutableSet<URI>> = mutableMapOf()
     }
 
     /**
-     * Результат сборки спецификации
+     * Результат сборки библиотеки типов
      *
-     * @param bundledSpecification текст собранной спецификации
-     * @param conflictingTypeNames перечень всех конфликтов в формате: указатель на место в корневой спецификации, в которое пытались
-     * добавить тип - список ссылок на типы, которые пытались добавить в это место корневой спецификации
+     * @param bundledSpecification текст собранной библиотеки типов
+     * @param conflictingTypeNames перечень всех конфликтов в формате: указатель на тип - список источников, которые содержат тип с таким
+     * же названием
      */
     data class Result(val bundledSpecification: String?, val conflictingTypeNames: Map<String, Set<URI>>)
 
     /**
-     * Производит нормализацию спецификации:
-     * * инлайнит ссылки на команды
-     * * ссылки на типы, расположенные в других документах, помещает в соответствующие части блока components корневой спецификации,
+     * Производит нормализацию библиотеки типов:
+     * * ссылки на типы, расположенные в других документах, помещает в соответствующие части блока components единого файла с типами,
      * меняет ссылку с определения типа в другом документе на определение в текущем документе
      * * Проверяет наличие конфликтов. Конфликтом считается попытка добавить в документ типы с одинаковым названием из разных источников
      * * Возвращает результат сборки: в случае успеха возвращает текст собранной спецификации,
      *    при наличии конфликтов, текст собранной спецификации отсутствует, в списке ошибок возвращается перечень всех конфликтов
      */
     fun bundle(): Result {
-
         if (fileNames.isEmpty()) {
             throw IllegalArgumentException("Empty filenames array")
         }
 
+        val collectedData = CollectedData()
         var firstRootNode: JsonNode? = null
         var firstBaseJsonRef: JsonRef? = null
 
@@ -74,7 +51,7 @@ class OpenApiV3LibraryBundle(private val fileNames: Array<URI>) {
             }
             if (!collectedData.remoteRefContent.containsKey(baseJsonRef)) {
                 // ссылка на домен, которая еще не обрабатывалась, загружаем кусок документа
-                val tree: JsonNode = getTreeOrLoadAndCache(baseJsonRef)
+                val tree: JsonNode = getTreeOrLoadToCache(baseJsonRef, collectedData.remoteRefContent)
                 if (firstRootNode == null) {
                     firstRootNode = tree
                 }
@@ -84,7 +61,7 @@ class OpenApiV3LibraryBundle(private val fileNames: Array<URI>) {
 
         fillComponents(firstRootNode!!, firstBaseJsonRef!!, collectedData)
 
-        val conflictingNames: Map<String, Set<URI>> = collectedData.sourceByParts
+        val conflictingNames: Map<String, Set<URI>> = collectedData.sourcesOfComponents
             .filter { entry -> entry.value.size > 1 }
             .mapKeys { entry -> entry.key.toString() }
 
@@ -133,7 +110,7 @@ class OpenApiV3LibraryBundle(private val fileNames: Array<URI>) {
             }
             !collectedData.remoteRefContent.containsKey(jsonRef) -> {
                 // ссылка на домен, которая еще не обрабатывалась, загружаем кусок документа
-                val tree: JsonNode = getTreeOrLoadAndCache(jsonRef)
+                val tree: JsonNode = getTreeOrLoadToCache(jsonRef, collectedData.remoteRefContent)
                 processObjectNode(tree, jsonRef, collectedData)
                 rootNode.replace(refKey, TextNode.valueOf(locateRefOnCurrentDocument(jsonRef)))
             }
@@ -143,8 +120,6 @@ class OpenApiV3LibraryBundle(private val fileNames: Array<URI>) {
             }
         }
     }
-
-    private fun locateRefOnCurrentDocument(jsonRef: JsonRef): String = hash.plus(jsonRef.pointer.toString())
 
     private fun fillComponents(
         rootNode: JsonNode,
@@ -156,14 +131,12 @@ class OpenApiV3LibraryBundle(private val fileNames: Array<URI>) {
         targetComponentsJsonNode.fields().forEach { entry ->
             entry.value.fields().forEach { sourceChildEntry ->
                 val currentJsonPointer = JsonPointer.of(components, entry.key, sourceChildEntry.key)
-                val sourceSet: MutableSet<URI> = collectedData.sourceByParts.getOrDefault(currentJsonPointer, mutableSetOf())
-                sourceSet.add(baseJsonRef.locator)
-                collectedData.sourceByParts[currentJsonPointer] = sourceSet
+                addSourceOfComponent(currentJsonPointer, baseJsonRef, collectedData.sourcesOfComponents)
             }
         }
 
         collectedData.remoteRefContent.keys.forEach { jsonRef ->
-            val refNode: JsonNode = getTreeOrLoadAndCache(jsonRef)
+            val refNode: JsonNode = getTreeOrLoadToCache(jsonRef, collectedData.remoteRefContent)
             // Наличие узла components в части документа с определением домена обязательно
             val sourceComponentsNode: JsonNode = refNode.findValue(components)
                 ?: throw IllegalStateException("Specification part doesn't contain components: ref=$jsonRef")
@@ -173,35 +146,10 @@ class OpenApiV3LibraryBundle(private val fileNames: Array<URI>) {
                     val currentJsonPointer = JsonPointer.of(components, entry.key, sourceChildEntry.key)
                     if (jsonRef.pointer == currentJsonPointer || jsonRef.pointer.isEmpty) {
                         targetComponentsChildNode.set(sourceChildEntry.key, sourceChildEntry.value)
-
-                        val sourceSet: MutableSet<URI> = collectedData.sourceByParts.getOrDefault(currentJsonPointer, mutableSetOf())
-                        sourceSet.add(jsonRef.locator)
-                        collectedData.sourceByParts[currentJsonPointer] = sourceSet
+                        addSourceOfComponent(currentJsonPointer, jsonRef, collectedData.sourcesOfComponents)
                     }
                 }
             }
         }
-    }
-
-    private fun loadContent(location: URI): String = IOUtils.toString(location)
-
-    private fun getTreeOrLoadAndCache(jsonRef: JsonRef): JsonNode {
-        val jsonNode: JsonNode? = collectedData.remoteRefContent[jsonRef]
-        if (jsonNode != null) {
-            return jsonNode
-        }
-        val content = loadContent(jsonRef.toURI())
-        val loadedTree: JsonNode = mapper.readTree(content)
-        collectedData.remoteRefContent[jsonRef] = loadedTree
-        return loadedTree
-    }
-
-    private fun findOrCreateObjectNode(key: String, parent: ObjectNode): ObjectNode {
-        var jsonNode: JsonNode? = parent.findValue(key)
-        if (jsonNode == null) {
-            jsonNode = mapper.createObjectNode()
-            parent.set(key, jsonNode)
-        }
-        return jsonNode as ObjectNode
     }
 }
