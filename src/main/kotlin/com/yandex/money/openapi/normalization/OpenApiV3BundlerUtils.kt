@@ -12,6 +12,7 @@ import java.net.URI
 
 const val refKey: String = "\$ref"
 const val components: String = "components"
+const val paths: String = "paths"
 const val hash: String = "#"
 
 private val yamlFactory = YAMLFactory()
