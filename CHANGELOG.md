@@ -1,7 +1,7 @@
-### NEXT_VERSION_TYPE=MINOR
-### NEXT_VERSION_DESCRIPTION_BEGIN
+## [2.2.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/2) (18-01-2021)
+
 * Подержка ref ссылок на элементы paths
-### NEXT_VERSION_DESCRIPTION_END
+
 ## [2.1.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/1) (08-07-2020)
 
 * Обновлена версия gradle 6.0.1 -> 6.4.1.
