@@ -44,7 +44,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
         val collectedData = CollectedData()
 
         processObjectNode(rootNode, baseJsonRef, collectedData)
-        fillComponents(rootNode, baseJsonRef, collectedData)
+        fill(rootNode, baseJsonRef, collectedData)
 
         val conflictingNames: Map<String, Set<URI>> = collectedData.sourcesOfComponents
             .filter { entry -> entry.value.size > 1 }
@@ -107,11 +107,47 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
     }
 
     private fun fillComponents(
+        sourceComponentsNode: JsonNode,
+        jsonRef: JsonRef,
+        collectedData: CollectedData,
+        targetComponentsJsonNode: ObjectNode
+    ) {
+        sourceComponentsNode.fields().forEach { entry ->
+            val targetComponentsChildNode = findOrCreateObjectNode(entry.key, targetComponentsJsonNode)
+            entry.value.fields().forEach { sourceChildEntry ->
+                val currentJsonPointer = JsonPointer.of(components, entry.key, sourceChildEntry.key)
+                if (jsonRef.pointer == currentJsonPointer) {
+                    targetComponentsChildNode.set(sourceChildEntry.key, sourceChildEntry.value)
+                    addSourceOfComponent(currentJsonPointer, jsonRef, collectedData.sourcesOfComponents)
+                }
+            }
+        }
+    }
+
+    private fun fillPaths(
+        sourceComponentsNode: JsonNode,
+        jsonRef: JsonRef,
+        collectedData: CollectedData,
+        targetComponentsJsonNode: ObjectNode
+    ) {
+        sourceComponentsNode.fields().forEach { entry ->
+            val targetComponentsChildNode = findOrCreateObjectNode(entry.key, targetComponentsJsonNode)
+            entry.value.fields().forEach { sourceChildEntry ->
+                val currentJsonPointer = JsonPointer.of(paths, entry.key, sourceChildEntry.key)
+                if (currentJsonPointer.parent() == jsonRef.pointer) {
+                    targetComponentsChildNode.remove(refKey)
+                    targetComponentsChildNode.set(sourceChildEntry.key, sourceChildEntry.value)
+                    addSourceOfComponent(currentJsonPointer, jsonRef, collectedData.sourcesOfComponents)
+                }
+            }
+        }
+    }
+
+    private fun fill(
         rootNode: JsonNode,
         baseJsonRef: JsonRef,
         collectedData: CollectedData
     ) {
-
         // заполняем для первого документа
         val targetComponentsJsonNode = findOrCreateObjectNode(components, rootNode as ObjectNode)
         targetComponentsJsonNode.fields().forEach { entry ->
@@ -121,20 +157,25 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
             }
         }
 
+        val targetPathsJsonNode = findOrCreateObjectNode(paths, rootNode as ObjectNode)
+        targetPathsJsonNode.fields().forEach { entry ->
+            entry.value.fields().forEach { sourceChildEntry ->
+                val currentJsonPointer = JsonPointer.of(paths, entry.key, sourceChildEntry.key)
+                addSourceOfComponent(currentJsonPointer, baseJsonRef, collectedData.sourcesOfComponents)
+            }
+        }
+
         collectedData.remoteRefContent.keys.forEach { jsonRef ->
             val refNode: JsonNode = getTreeOrLoadToCache(jsonRef, collectedData.remoteRefContent)
             // Наличие узла components в части документа с определением домена обязательно
-            val sourceComponentsNode: JsonNode = refNode.findValue(components)
-                ?: throw IllegalStateException("Specification part doesn't contain components: ref=$jsonRef")
-            sourceComponentsNode.fields().forEach { entry ->
-                val targetComponentsChildNode = findOrCreateObjectNode(entry.key, targetComponentsJsonNode)
-                entry.value.fields().forEach { sourceChildEntry ->
-                    val currentJsonPointer = JsonPointer.of(components, entry.key, sourceChildEntry.key)
-                    if (jsonRef.pointer == currentJsonPointer) {
-                        targetComponentsChildNode.set(sourceChildEntry.key, sourceChildEntry.value)
-                        addSourceOfComponent(currentJsonPointer, jsonRef, collectedData.sourcesOfComponents)
-                    }
-                }
+            if (refNode.has(components)) {
+                val sourceComponentsNode: JsonNode = refNode.findValue(components)
+                fillComponents(sourceComponentsNode, jsonRef, collectedData, targetComponentsJsonNode)
+            } else if (refNode.has(paths)) {
+                val sourcePathsNode: JsonNode = refNode.findValue(paths)
+                fillPaths(sourcePathsNode, jsonRef, collectedData, targetPathsJsonNode)
+            } else {
+                throw IllegalStateException("Specification part doesn't contain components: ref=$jsonRef")
             }
         }
     }
