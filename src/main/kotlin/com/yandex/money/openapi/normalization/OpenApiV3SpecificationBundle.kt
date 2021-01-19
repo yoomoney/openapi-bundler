@@ -64,7 +64,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
         rootNode.fields().forEach { entry ->
             when {
                 entry.value.isTextual && entry.key == refKey ->
-                    processTextNode(entry.value, baseJsonRef, collectedData, rootNode as ObjectNode)
+                    processRefNode(entry.value, baseJsonRef, collectedData, rootNode as ObjectNode)
                 entry.value.isArray ->
                     entry.value.forEach { processObjectNode(it, baseJsonRef, collectedData) }
                 entry.value.isObject ->
@@ -73,7 +73,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
         }
     }
 
-    private fun processTextNode(
+    private fun processRefNode(
         currentNode: JsonNode,
         baseJsonRef: JsonRef,
         collectedData: CollectedData,
@@ -95,9 +95,21 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
             }
             !collectedData.remoteRefContent.containsKey(jsonRef) -> {
                 // ссылка на домен, которая еще не обрабатывалась, загружаем кусок документа
-                val tree: JsonNode = getTreeOrLoadToCache(jsonRef, collectedData.remoteRefContent)
-                processObjectNode(tree, jsonRef, collectedData)
-                rootNode.replace(refKey, TextNode.valueOf(locateRefOnCurrentDocument(jsonRef)))
+                val content: String = loadContent(jsonRef.toURI())
+                val tree: JsonNode = mapper.readTree(content)
+
+                // ищем ссылку в загруженном куске
+                val refNode = jsonRef.pointer.get(tree)
+                if (refNode.has(refKey) && refNode.fields().asSequence().toList().size == 1) {
+                    val nextRef = JsonRef.fromString(refNode.get(refKey).asText())
+                    val nextRefTree: JsonNode = getTreeOrLoadToCache(nextRef, collectedData.remoteRefContent)
+                    processObjectNode(nextRefTree, nextRef, collectedData)
+                    rootNode.replace(refKey, TextNode.valueOf(locateRefOnCurrentDocument(nextRef)))
+                } else {
+                    collectedData.remoteRefContent[jsonRef] = tree
+                    processObjectNode(tree, jsonRef, collectedData)
+                    rootNode.replace(refKey, TextNode.valueOf(locateRefOnCurrentDocument(jsonRef)))
+                }
             }
             else -> {
                 // ссылка на домен, которая еще не обрабатывалась, просто меняем ссылку
