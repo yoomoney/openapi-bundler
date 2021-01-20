@@ -11,6 +11,9 @@ import org.apache.commons.io.IOUtils
 import java.net.URI
 
 const val refKey: String = "\$ref"
+const val exampleKey: String = "example"
+const val typeKey: String = "type"
+const val stringValueMarker = " #string-value-marker# "
 const val components: String = "components"
 const val paths: String = "paths"
 const val hash: String = "#"

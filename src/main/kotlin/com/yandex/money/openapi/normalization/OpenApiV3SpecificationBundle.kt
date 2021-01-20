@@ -51,7 +51,10 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
             .mapKeys { entry -> entry.key.toString() }
 
         val bundledSpecification = if (conflictingNames.isEmpty())
-            mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode) else null
+            mapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(rootNode)
+                .replace(stringValueMarker, "") // Удаляем маркеры форсирования добавления кавычек при сериализации
+        else null
 
         return Result(bundledSpecification, conflictingNames)
     }
@@ -65,11 +68,25 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
             when {
                 entry.value.isTextual && entry.key == refKey ->
                     processRefNode(entry.value, baseJsonRef, collectedData, rootNode as ObjectNode)
+                entry.value.isTextual && entry.key == exampleKey ->
+                    processExampleNode(entry.value, rootNode as ObjectNode)
                 entry.value.isArray ->
                     entry.value.forEach { processObjectNode(it, baseJsonRef, collectedData) }
                 entry.value.isObject ->
                     processObjectNode(entry.value, baseJsonRef, collectedData)
             }
+        }
+    }
+
+    private fun processExampleNode(
+        currentNode: JsonNode,
+        rootNode: ObjectNode
+    ) {
+        // При сериализации строковых значений сериализатор убирает кавычки у строк из-за настройки YAMLGenerator.Feature.MINIMIZE_QUOTES.
+        // Поэтому явно добавляем маркер с пробелом в начало строки, чтобы зафорсить добавление одинарных кавычек для строковых примеров.
+        // После сериализации всей спецификации все маркеры будут удалены.
+        if (rootNode.get(typeKey)?.textValue()?.toLowerCase() == "string") {
+            rootNode.set(exampleKey, TextNode.valueOf(stringValueMarker + currentNode.textValue()))
         }
     }
 

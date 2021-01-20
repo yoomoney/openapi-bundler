@@ -1,5 +1,6 @@
-### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_TYPE=MINOR
 ### NEXT_VERSION_DESCRIPTION_BEGIN
+* Добавлено форсированое добавление одинарных кавычек для примеров строковых значений
 ### NEXT_VERSION_DESCRIPTION_END
 ## [2.3.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/3) (20-01-2021)
 
