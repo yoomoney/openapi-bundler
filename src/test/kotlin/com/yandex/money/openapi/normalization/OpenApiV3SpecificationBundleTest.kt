@@ -52,6 +52,20 @@ class OpenApiV3SpecificationBundleTest {
     }
 
     @Test
+    fun should_success_bundle_with_api_type_library_refs() {
+        wireMockRule.stubFor(get(urlEqualTo("/domain.yaml"))
+            .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yaml")))))
+
+        val fileName = this.javaClass.getResource("test-success-with-api-type-library-refs/specification.yaml")
+        val bundledSpecification = OpenApiV3SpecificationBundle(fileName.toURI()).bundle().bundledSpecification
+        val bundleTree = mapper.readTree(bundledSpecification)
+
+        val expectedResultFileName = this.javaClass.getResource("test-success-with-api-type-library-refs/specification_expected_result.yaml")
+        val expectedTree = mapper.readTree(IOUtils.toString(expectedResultFileName))
+        Assert.assertEquals(bundleTree, expectedTree)
+    }
+
+    @Test
     fun should_get_errors() {
         wireMockRule.stubFor(get(urlEqualTo("/domain.yaml"))
             .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yaml")))))

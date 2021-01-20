@@ -1,0 +1,22 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Подключаемые типы
+
+components:
+  schemas:
+    # phone
+    PhoneRef:
+      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/phone.yaml#/components/schemas/Phone'
+
+    # pagination
+    After:
+      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/pagination.yaml#/components/schemas/After'
+
+  parameters:
+    # pagination
+    After:
+      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/pagination.yaml#/components/parameters/After'
+
+paths: { }

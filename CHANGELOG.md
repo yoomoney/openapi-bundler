@@ -1,5 +1,6 @@
-### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_TYPE=MINOR
 ### NEXT_VERSION_DESCRIPTION_BEGIN
+* Добавлена возможность указывать промежуточные узлы с сылками на внешние документы
 ### NEXT_VERSION_DESCRIPTION_END
 ## [2.2.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/2) (18-01-2021)
 
