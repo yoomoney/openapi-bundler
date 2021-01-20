@@ -1,7 +1,7 @@
-### NEXT_VERSION_TYPE=MINOR
-### NEXT_VERSION_DESCRIPTION_BEGIN
+## [2.3.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/3) (20-01-2021)
+
 * Добавлена возможность указывать промежуточные узлы с сылками на внешние документы
-### NEXT_VERSION_DESCRIPTION_END
+
 ## [2.2.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/2) (18-01-2021)
 
 * Подержка ref ссылок на элементы paths
