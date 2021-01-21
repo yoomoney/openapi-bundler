@@ -1,3 +1,6 @@
+### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_DESCRIPTION_BEGIN
+### NEXT_VERSION_DESCRIPTION_END
 ## [2.4.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/4) (21-01-2021)
 
 * Добавлено форсированое добавление одинарных кавычек для примеров строковых значений
