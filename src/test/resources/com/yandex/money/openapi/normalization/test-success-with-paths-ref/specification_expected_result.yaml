@@ -80,7 +80,7 @@ paths:
           required: true
           schema:
             type: string
-            example: 10.00
+            example: '10.00'
         - name: currency
           description: ISO-4217 3-alpha символьный код валюты перевода.
           in: query
@@ -185,14 +185,14 @@ paths:
                             type: string
                             enum:
                               - RuleViolation
-                            example: RuleViolation
+                            example: 'RuleViolation'
                           rule:
                             description: Код правила бизнес-логики.
                             type: string
                             enum:
                               - RecipientNotFound
                               - RecipientAmbiguity
-                            example: RecipientAmbiguity
+                            example: 'RecipientAmbiguity'
                         required:
                           - type
                           - rule
@@ -224,13 +224,13 @@ paths:
                             type: string
                             enum:
                               - RuleViolation
-                            example: RuleViolation
+                            example: 'RuleViolation'
                           rule:
                             description: Код правила бизнес-логики.
                             type: string
                             enum:
                               - SourceWalletBlocked
-                            example: SourceWalletBlocked
+                            example: 'SourceWalletBlocked'
                           resolveUrl:
                             description: |
                               URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода. Присутствует при type=SourceWalletBlocked.
@@ -263,7 +263,7 @@ components:
       type: string
       enum:
         - Redirect
-      example: Redirect
+      example: 'Redirect'
     TransferStatus:
       description: |
         Статус перевода:
@@ -284,7 +284,7 @@ components:
         - Sent
         - Delivered
         - Canceled
-      example: Delivered
+      example: 'Delivered'
     TransferErrorType:
       description: |
         Причина отказа в проведении перевода или его отмены.
@@ -307,7 +307,7 @@ components:
         - SimplifiedIdentificationRequired
         - TransferExpired
         - TransferDeclined
-      example: InsufficientFunds
+      example: 'InsufficientFunds'
     TransferError:
       description: Отказ в проведении перевода или причина его отмены.
       type: object
@@ -323,7 +323,7 @@ components:
       type: string
       minLength: 36
       maxLength: 36
-      example: 1da5c87d-0984-50e8-a7f3-8de646dd9ec9
+      example: '1da5c87d-0984-50e8-a7f3-8de646dd9ec9'
     Transfer:
       description: Перевод в системе Яндекс.Деньги.
       type: object
@@ -344,7 +344,7 @@ components:
         Одноразовый токен для проведения перевода, имеет ограниченный срок действия.
       type: string
       maxLength: 200
-      example: +u7PDjMTkf08NtD66P6+eYWa2yjU3gsSIhOOO+OWsOg=
+      example: '+u7PDjMTkf08NtD66P6+eYWa2yjU3gsSIhOOO+OWsOg='
     Fee:
       description: Комиссия с отправителя сверх суммы перевода.
       type: object
@@ -390,13 +390,13 @@ components:
             - SyntaxError
             - IllegalParameters
             - IllegalHeaders
-          example: IllegalParameters
+          example: 'IllegalParameters'
         parameterNames:
           description: Список наименований и путей параметров, содержащих некорректные значения. Присутствует при type=IllegalParameters.
           type: array
           items:
             type: string
-            example: amount
+            example: 'amount'
             description: |
               Имя параметра включая его полный путь в JSON документе. Поле вложенного объекта указывается через точку. Номер элемента списка указывается в квадратных скобках.
               Примеры:
@@ -409,7 +409,7 @@ components:
           type: array
           items:
             type: string
-            example: Authorization
+            example: 'Authorization'
       required:
         - type
     PermissionsError:
@@ -424,14 +424,14 @@ components:
           type: string
           enum:
             - InvalidScope
-          example: InvalidScope
+          example: 'InvalidScope'
       required:
         - type
     CurrencyCode:
       description: Код валюты, ISO-4217 3-alpha currency symbol.
       type: string
       pattern: '[A-Z]{3}'
-      example: RUB
+      example: 'RUB'
     MonetaryAmount:
       description: Сумма в выбранной валюте.
       type: object
@@ -440,7 +440,7 @@ components:
           description: Сумма, десятичное число с фиксированной точкой в строковом представлении.
           type: string
           pattern: (\d+\.\d{2}|\d+)
-          example: 10.00
+          example: '10.00'
         currency:
           $ref: '#/components/schemas/CurrencyCode'
       required:
@@ -464,7 +464,7 @@ components:
                     type: string
                     enum:
                       - ProcessingRequest
-                    example: ProcessingRequest
+                    example: 'ProcessingRequest'
                   retryAfter:
                     description: Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос.
                     type: integer
@@ -485,17 +485,6 @@ components:
             properties:
               error:
                 $ref: '#/components/schemas/ArgumentsError'
-    PermissionsError:
-      description: Ответ о запрете выполнения запроса.
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              error:
-                $ref: '#/components/schemas/PermissionsError'
-            required:
-              - error
     AuthenticationError:
       description: |
         Запрос не может быть выполнен — ошибка аутентификационных данных клиента.
@@ -526,9 +515,20 @@ components:
                       - InvalidToken
                       - InvalidSignature
                       - InvalidInstanceId
-                    example: InvalidCredentials
+                    example: 'InvalidCredentials'
                 required:
                   - type
+            required:
+              - error
+    PermissionsError:
+      description: Ответ о запрете выполнения запроса.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/PermissionsError'
             required:
               - error
     TooManyRequestsError:
@@ -550,7 +550,7 @@ components:
                     type: string
                     enum:
                       - TooManyRequests
-                    example: TooManyRequests
+                    example: 'TooManyRequests'
                   retryAfter:
                     description: Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос.
                     type: integer
@@ -584,7 +584,7 @@ components:
                     enum:
                       - TechnicalError
                       - ServiceUnavailable
-                    example: TechnicalError
+                    example: 'TechnicalError'
                   retryAfter:
                     description: Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос.
                     type: integer
@@ -594,7 +594,7 @@ components:
                   description:
                     description: Дополнительное текстовое пояснение причины ошибки. Может присутствовать в некоторых случаях.
                     type: string
-                    example: Съешь еще этих мягких французских булок
+                    example: 'Съешь еще этих мягких французских булок'
                 required:
                   - type
             required:

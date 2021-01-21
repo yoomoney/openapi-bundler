@@ -9,6 +9,8 @@ artifactID = "yamoney-openapi-spec-bundler"
 
 dependencies {
 
+
+
     implementation 'com.github.java-json-tools:json-schema-core:1.2.8',
             'commons-io:commons-io:2.4',
             'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.0'
