@@ -1,0 +1,913 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Схемы для работы с tag Invoices
+
+paths:
+
+  /invoices:
+    get:
+      summary: Получение выставленных счетов
+      description: Запрос истории выставленных счетов на оплату товара по платежной ссылке
+      tags:
+        - Счета
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          description: Идентификатор магазина
+          required: true
+          example: "12345"
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Ограничение на количество записей в выдаче. Если поле не задано, то подставится дефолтное значение = 10
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            example: 50
+        - name: after
+          in: query
+          description: Метка для запроса следующей порции данных.
+          required: false
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: Поисковый запрос, в котором можно указывать <br> номер счёта (orderNumber), ФИО, email или телефон покупателя.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: type
+          description: Требуемый тип счетов.
+          in: query
+          required: false
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/InvoiceType'
+        - name: status
+          description: Ограничение на статусы требуемых счетов.
+          in: query
+          required: false
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/InvoiceStatus'
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                title: GetInvoicesResponse
+                description: Ответ для получения списка счетов
+                type: object
+                properties:
+                  after:
+                    type: string
+                    description: Метка для запроса следующей порции данных.
+                  items:
+                    type: array
+                    description: Список счетов
+                    items:
+                      $ref: '#/components/schemas/InvoiceBrief'
+                required:
+                  - items
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+    post:
+      summary: Выставление счета
+      description: Выставление плательщику счета на оплату товара по платежной ссылке
+      tags:
+        - Счета
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - $ref: 'domain.yaml#/components/parameters/IdempotenceKey'
+      requestBody:
+        description: Выставляемый счет
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitInvoiceRequest'
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        400:
+          description: Запрос с указанными параметрами не может быть выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsSyntaxError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsParametersError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsHeadersError'
+                      - description: >
+                          Нельзя выставить счет:
+
+                          Коды ошибок:
+
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * EmailAndPhoneExist - В запросе были переданы и email и номер телефон. Невозможно определить тип выставляемого счета.
+                            * OrderNumberAlreadyExists - Указанный номер счета уже существует.
+                            * SmsInvoiceSumIsLow - Сумма смс-счета ниже заданного лимита.
+                            * VatCodeIsNeededForFiscalization - Идентификатор ставки НДС обязателен для фискализированных магазинов.
+                            * VatCodeIsNotNeeded - Идентификатор ставки НДС не нужен для нерублевых магазинов.
+                            * InappropriateCurrency - Недопустимая валюта для магазина.
+                            * ProductNamesShouldBeUnique - При сохранении товаров в каталог названия товаров в выставляемом счете должны быть уникальными.
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - EmailAndPhoneExist
+                              - OrderNumberAlreadyExists
+                              - SmsInvoiceSumIsLow
+                              - VatCodeIsNeededForFiscalization
+                              - VatCodeIsNotNeeded
+                              - InappropriateCurrency
+                              - ProductNamesShouldBeUnique
+                            example: InappropriateCurrency
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /invoice-options:
+    get:
+      summary: Получение информации для выставления счетов
+      description: Получение информации для выставления счетов в рамках указанного магазина
+      tags:
+        - Счета
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          description: Идентификатор магазина
+          required: true
+          example: "12345"
+          schema:
+            type: string
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceOptions'
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /invoice-settings:
+    get:
+      summary: Получение настроек счетов
+      description: Получение настроек для всех счетов в рамках указанного магазина
+      tags:
+        - Счета
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          description: Идентификатор магазина
+          example: '12345'
+          required: true
+          schema:
+            type: string
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceSettings'
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+    post:
+      summary: Изменение настроек счетов
+      description: Изменение настроек для всех счетов в рамках указанного магазина
+      tags:
+        - Счета
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - $ref: 'domain.yaml#/components/parameters/IdempotenceKey'
+      requestBody:
+        description: Настройки счетов
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetInvoiceSettingsRequest'
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Запрос с указанными параметрами не может быть выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsSyntaxError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsParametersError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsHeadersError'
+                      - description: >
+                          Невозможно изменить настройки счета с заданными параметрами:
+
+                          Коды ошибок:
+
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * PaymentModeShouldBeDefined - Поле "Способ расчета по умолчанию" должно быть задано, если флаг необходимости сокрытия поля "способ расчета" выставлен в true.
+                            * PaymentSubjectShouldBeDefined - Поле "Предмет расчета по умолчанию" должно быть задано, если флаг необходимости сокрытия поля "предмет расчета" выставлен в true.
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - PaymentModeShouldBeDefined
+                              - PaymentSubjectShouldBeDefined
+                            example: PaymentModeShouldBeDefined
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /invoices/(invoiceId):
+    get:
+      summary: Получение выставленного на оплату счета со списком товаров
+      description: Получение выставленного на оплату счета со списком товаров
+      tags:
+        - Счета
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: invoiceId
+          in: path
+          description: Идентификатор счета на оплату товара
+          required: true
+          schema:
+            type: integer
+            format: int32
+            example: 501234
+        - name: shopId
+          in: query
+          description: Идентификатор магазина, в котором был выставлен счет с данным invoiceId.
+          required: true
+          example: "12345"
+          schema:
+            type: string
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /invoices/(invoiceId)/cancel:
+    post:
+      summary: Отмена выставленного счёта
+      description: Отмена выставленного счёта по идентификатору счета
+      tags:
+        - Счета
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - $ref: 'domain.yaml#/components/parameters/IdempotenceKey'
+        - name: invoiceId
+          in: path
+          description: Идентификатор счета
+          required: true
+          schema:
+            type: integer
+            format: int32
+            example: 501234
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Запрос с указанными параметрами не может быть выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsSyntaxError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsParametersError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsHeadersError'
+                      - description: >
+                          Невозможно отменить счет с заданными параметрами:
+
+                          Коды ошибок:
+
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * InvalidInvoiceId - Счет с заданным "Идентификатором счета" не существует.
+                            * InvalidInvoiceStatus - Отменяемый счет находится не в статусе `Created`.
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - InvalidInvoiceId
+                              - InvalidInvoiceStatus
+                            example: InvalidInvoiceId
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+components:
+
+  schemas:
+
+    Invoice:
+      description: Выставленный счет
+      type: object
+      properties:
+        id:
+          description: Идентификатор записи
+          type: integer
+          format: "int64"
+        type:
+          $ref: '#/components/schemas/InvoiceType'
+        link:
+          description: Ссылка для оплаты выставленного счета (диплинк на страницу с выставленным счетом)
+          type: string
+        orderNumber:
+          description: Номер счета (уникален в рамках одного магазина)
+          type: string
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceProduct'
+        email:
+          description: Email плательщика
+          type: string
+        phoneNumber:
+          description: Номер телефона на который будет выслан счет по СМС
+          type: string
+          x-sensitive: true
+        fullName:
+          description: ФИО плательщика
+          type: string
+          x-sensitive: true
+        amount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        amountWithoutDiscount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        description:
+          description: Описание счета, символы разметки не допускаются
+          maxLength: 1024
+          type: string
+        createDate:
+          description: Дата и время создания счета
+          type: string
+          format: 'date-time'
+          example: "2019-02-18T17:05:07Z"
+        login:
+          description: Логин пользователя, выставившего счёт
+          type: string
+        expiry:
+          description: Время окончания жизни счета
+          type: string
+          format: 'date-time'
+          example: "2019-02-19T17:05:07Z"
+        language:
+          $ref: 'domain.yaml#/components/schemas/Language'
+        cancelAvailability:
+          $ref: '#/components/schemas/CancelInvoiceAvailability'
+      required:
+        - id
+        - type
+        - orderNumber
+        - status
+        - amount
+        - amountWithoutDiscount
+        - createDate
+        - login
+        - products
+        - cancelAvailability
+
+    CancelInvoiceAvailability:
+      description: Возможность отмены счета
+      type: object
+      properties:
+        enabled:
+          description: Признак доступности операции отмены для текущего счёта
+          type: boolean
+      required:
+        - enabled
+
+    InvoiceBrief:
+      description: Краткая информация о выставленном счете
+      type: object
+      properties:
+        id:
+          description: Идентификатор записи
+          type: integer
+          format: "int64"
+        type:
+          $ref: '#/components/schemas/InvoiceType'
+        orderNumber:
+          description: Номер счета (уникален в рамках одного магазина)
+          type: string
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        amount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        amountWithoutDiscount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        createDate:
+          description: Дата и время создания счета
+          type: string
+          format: 'date-time'
+          example: "2019-02-18T17:05:07Z"
+      required:
+        - id
+        - type
+        - orderNumber
+        - status
+        - amount
+        - amountWithoutDiscount
+        - createDate
+
+    SubmitInvoiceRequest:
+      description: Запрос на выставление счета
+      type: object
+      properties:
+        shopId:
+          description: Идентификатор магазина
+          type: string
+          pattern: '^[0-9]*$'
+          example: "12345"
+        amount:
+          allOf:
+            - $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+            - description: |
+                Ограничение на сумму выставляемого счета:
+                * Для InvoiceType = Email и Link - минимальная сумма счета 1 рубль, максимальная сумма счета 1 000 000 рублей
+                * Для InvoiceType = Sms минимальная сумма счета 100 рублей, максимальная сумма счета 1 000 000 рублей
+                * Для валютных магазинов минимальная сумма счета 1 у.е., максимальная сумма счета 1 000 000 у.е. для всех типов выставляемых счетов.
+        amountWithoutDiscount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceProduct'
+        language:
+          $ref: 'domain.yaml#/components/schemas/Language'
+        expiry:
+          description: Время окончания жизни счета
+          type: string
+          format: 'date-time'
+          example: "2019-02-19T17:05:07Z"
+        orderNumber:
+          description: Идентификатор счета
+          type: string
+          maxLength: 64
+          pattern: '[0-9a-zA-Zа-яА-ЯёЁ"/:;\-_\\]*'
+          example: '85632-21'
+        phoneNumber:
+          description: Номер телефона на который будет выслан счет по СМС
+          type: string
+          example: '+79919919911'
+        fullName:
+          description: ФИО плательщика
+          type: string
+          maxLength: 256
+          example: 'Иванов Иван Иванович'
+        description:
+          description: Описание счета
+          type: string
+          maxLength: 1024
+          example: 'Описание выставленного счета'
+        email:
+          description: Email плательщика
+          type: string
+          maxLength: 100
+          example: 'email@ya.ru'
+        receiptCustomer:
+          $ref: '#/components/schemas/ReceiptCustomer'
+        saveProductsToCatalog:
+          description: Сохранять ли товары в Справочник товаров
+          type: boolean
+        savePayerToCatalog:
+          description: Сохранять ли информацию о плательщике в Справочник плательщиков. При выставлении счета по ссылке информация о плательщике не сохраняется.
+          type: boolean
+      required:
+        - shopId
+        - amount
+        - amountWithoutDiscount
+        - products
+        - language
+
+    InvoiceProduct:
+      description: Продукт в составе счета
+      type: object
+      properties:
+        name:
+          description: Название продукта
+          type: string
+          maxLength: 200
+          example: 'Название товара'
+        count:
+          description: Количество единиц продукта, целое или дробное, до 3 цифр после точки
+          type: number
+          example: 1
+        price:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        priceWithoutDiscount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        discountValue:
+          description: Сумма скидки за единицу продукта (в валюте магазина или процентах), тип значения определяется с помощью поля discountType. Если скидки нет, то значение discountValue должно быть null.
+          type: number
+          example: '10'
+        discountType:
+          allOf:
+            - $ref: '#/components/schemas/DiscountType'
+            - description: Если скидки нет, то значение discountType должно быть null.
+        vatCode:
+          description: Идентификатор ставки НДС (от 1 до 6), при выставлении счета следует использовать коды 1, 3 или 4
+            «1» – без НДС;
+            «2» – НДС по ставке 0%;
+            «3» – НДС чека по ставке 10%;
+            «4» – НДС чека по ставке 20%;
+            «5» – НДС чека по расчетной ставке 10/110;
+            «6» – НДС чека по расчетной ставке 20/120;
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 6
+          example: 1
+        paymentSubject:
+          $ref: 'domain.yaml#/components/schemas/PaymentSubject'
+        paymentMode:
+          $ref: '#/components/schemas/PaymentMode'
+      required:
+        - name
+        - count
+        - price
+        - priceWithoutDiscount
+
+    ReceiptCustomer:
+      type: object
+      description: Информация о покупателе в рамках дополнения к ФЗ-54 от 01.07.2019.
+      properties:
+        fullName:
+          description: Полное имя клиента. Если у физлица отсутствует ИНН, в этом же параметре передаются паспортные данные
+          type: string
+          example: 'Иванов Иван Иванович'
+          x-sensitive: true
+        itn:
+          description: ИНН клиента
+          type: string
+          minLength: 10
+          maxLength: 12
+          pattern: '^(\d{10}|\d{12})$'
+          example: '6321341814'
+          x-sensitive: true
+      required:
+        - fullName
+
+    InvoiceSettings:
+      description: Настройки для всех счетов в рамках одного магазина
+      type: object
+      properties:
+        language:
+          $ref: 'domain.yaml#/components/schemas/Language'
+        defaultPaymentSubject:
+          $ref: 'domain.yaml#/components/schemas/PaymentSubject'
+        defaultPaymentMode:
+          $ref: '#/components/schemas/PaymentMode'
+        hidePaymentSubject:
+          description: Скрывать ли поля "предмет расчтета"
+          type: boolean
+        hidePaymentMode:
+          description: Скрывать ли поля "способ расчтета"
+          type: boolean
+        discountEnabled:
+          description: Предоставляется ли скидка
+          type: boolean
+        customOrderNumberEnabled:
+          description: Предоставляется ли возможность указывать собственный номер счета при выставлении счета
+          type: boolean
+        defaultVatCode:
+          $ref: 'domain.yaml#/components/schemas/VatCode'
+      required:
+        - language
+        - hidePaymentSubject
+        - hidePaymentMode
+        - discountEnabled
+        - customOrderNumberEnabled
+
+    InvoiceOptions:
+      description: Информация для выставления счета
+      type: object
+      properties:
+        currency:
+          title: Код валюты, ISO-4217 3-alpha currency symbol
+          description: |
+            Код валюты, ISO-4217 3-alpha currency symbol, например:
+            RUB; USD; EUR; BYN; KZT. XXX в случае неизвестной валюты.
+          type: string
+          example: RUB
+      required:
+        - currency
+
+    SetInvoiceSettingsRequest:
+      description: Обновляемые настройки для всех счетов в рамках одного магазина. Если значение полей defaultPaymentSubject, defaultPaymentMode и defaultVatCode не передаются или равны null, тогда они обновятся в базе на null значения.
+      type: object
+      properties:
+        shopId:
+          description: Идентификатор магазина
+          type: string
+          example: '12345'
+          pattern: '^[0-9]*$'
+        language:
+          $ref: 'domain.yaml#/components/schemas/Language'
+        defaultPaymentSubject:
+          $ref: 'domain.yaml#/components/schemas/PaymentSubject'
+        defaultPaymentMode:
+          $ref: '#/components/schemas/PaymentMode'
+        hidePaymentSubject:
+          description: Скрывать ли поля "предмет расчета"
+          type: boolean
+        hidePaymentMode:
+          description: Скрывать ли поля "способ расчета"
+          type: boolean
+        discountEnabled:
+          description: Предоставляется ли скидка
+          type: boolean
+        customOrderNumberEnabled:
+          description: Предоставляется ли возможность указывать собственный номер счета при выставлении счета
+          type: boolean
+        defaultVatCode:
+          $ref: 'domain.yaml#/components/schemas/VatCode'
+      required:
+        - shopId
+        - language
+        - hidePaymentSubject
+        - hidePaymentMode
+        - discountEnabled
+        - customOrderNumberEnabled
+
+    InvoiceType:
+      type: string
+      enum:
+        - Email
+        - Sms
+        - Link
+      description: |
+        * Email : Счет, выставляемый по email
+        * Sms : Счет, выставляемый по sms
+        * Link:  Счет, выставляемый по ссылке
+
+
+    InvoiceStatus:
+      type: string
+      enum:
+        - Archived
+        - Canceled
+        - Created
+        - Paid
+        - Expired
+        - PartiallyRefunded
+        - FullyRefunded
+      description: |
+        * Archived : Архивный - используется в счетах, созданных до появления функционала отмены счета
+        * Created : Создан
+        * Paid:  Оплачен
+        * Canceled: Отменен
+        * Expired: Истек срок жизни
+        * PartiallyRefunded: Частично возвращен
+        * FullyRefunded: Полностью возвращен
+
+
+    PaymentMode:
+      type: string
+      enum:
+        - FullPrepayment
+        - PartialPrepayment
+        - Advance
+        - FullPayment
+        - PartialPayment
+        - Credit
+        - CreditPayment
+      description: |
+        * FullPrepayment : Предоплата 100%
+        * PartialPrepayment : Частичная предварительная оплата до момента передачи предмета расчета
+        * Advance : Аванс
+        * FullPayment : Полный расчет
+        * PartialPayment : Частичный расчет и кредит
+        * Credit : Передача в кредит
+        * CreditPayment : Оплата кредита
+
+
+    DiscountType:
+      type: string
+      enum:
+        - Percent
+        - Absolute
+      description: |
+        * Percent : Скидка предоставляется в процентах
+        * Absolute : Скидка предоставляется в абсолютной величине
+

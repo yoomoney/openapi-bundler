@@ -1,0 +1,267 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Схемы для работы с tag Catalog
+
+paths:
+
+  /catalog/products:
+    get:
+      summary: Поиск по справочнику товаров по наименованию товара
+      description: Поиск по справочнику товаров по наименованию товара
+      tags:
+        - Каталог
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          description: Идентификатор магазина
+          required: true
+          example: "12345"
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Ограничение на количество записей в выдаче. Если поле не задано, то подставится дефолтное значение = 10.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            example: 50
+        - name: after
+          in: query
+          description: Метка для запроса следующей порции данных. Если поле не задано, то подставится дефолтное значение = 0.
+          required: false
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: Поисковый запрос, в котором указывается название товара.
+          schema:
+            type: string
+            maxLength: 200
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: GetCatalogProductsResponse
+                description: Ответ для получения списка товаров
+                properties:
+                  after:
+                    type: string
+                    description: Метка для запроса следующей порции данных.
+                    example: 123456
+                  items:
+                    type: array
+                    description: Список товаров
+                    items:
+                      $ref: '#/components/schemas/CatalogProduct'
+                required:
+                  - items
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /catalog/payers:
+    get:
+      summary: Поиск по справочнику плательщиков по ФИО, email или номеру телефона плательщика
+      description: Поиск по справочнику плательщиков по ФИО, email или номеру телефона плательщика
+      tags:
+        - Каталог
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          description: Идентификатор магазина
+          required: true
+          example: "12345"
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Ограничение на количество записей в выдаче. Если поле не задано, то подставится дефолтное значение = 10.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            example: 50
+        - name: after
+          in: query
+          description: Метка для запроса следующей порции данных. Если поле не задано, то подставится дефолтное значение = 0.
+          required: false
+          schema:
+            type: string
+          example: 100
+        - name: searchFieldType
+          in: query
+          description: Поле, по которому ищется плательщик.
+          required: true
+          schema:
+            $ref: '#/components/schemas/SearchFieldType'
+        - name: query
+          in: query
+          description: Поисковый запрос, в котором можно указывать ФИО, email или номер телефона покупателя.
+          schema:
+            type: string
+            maxLength: 100
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: GetCatalogPayersResponse
+                description: Ответ для получения списка покупателей
+                properties:
+                  after:
+                    type: string
+                    description: Метка для запроса следующей порции данных.
+                    example: 12345
+                  items:
+                    type: array
+                    description: Список покупателей
+                    items:
+                      $ref: '#/components/schemas/CatalogPayer'
+                required:
+                  - items
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+components:
+
+  schemas:
+
+    CatalogProduct:
+      description: Шаблон продукта, используемый для быстрого выбора при выставлении счета
+      type: object
+      properties:
+        shopId:
+          description: Идентификатор магазина
+          type: string
+          example: 54321
+        id:
+          description: Идентификатор продукта
+          type: integer
+          format: int64
+          minimum: 1
+          example: 12345
+        name:
+          description: Название продукта
+          type: string
+          maxLength: 200
+          example: Игрушка детская
+        price:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        description:
+          description: Описание продукта
+          maxLength: 500
+          type: string
+          example: Хорошая игрушка для детей
+      required:
+        - id
+        - shopId
+        - name
+        - price
+
+    CatalogPayer:
+      description: Шаблон плательщика, используемый для быстрого выбора при выставлении счета
+      type: object
+      properties:
+        shopId:
+          description: Идентификатор магазина
+          type: string
+          example: 54321
+        id:
+          description: Идентификатор плательщика
+          type: integer
+          format: int64
+          minimum: 1
+          example: 1
+        fullName:
+          description: ФИО плательщика
+          type: string
+          maxLength: 100
+          example: Иванов Иван Иванович
+        address:
+          description: Адрес плательщика
+          type: string
+          maxLength: 500
+          example: Улица Пушкина, дом 1
+        phone:
+          description: Телефон плательщика
+          type: string
+          maxLength: 50
+          example: +79522776077
+        email:
+          description: Email плательщика
+          type: string
+          maxLength: 100
+          example: ya@ya.ru
+      required:
+        - id
+        - shopId
+
+    SearchFieldType:
+      type: string
+      enum:
+        - FullName
+        - Email
+        - Phone
+      description: |
+        * FullName : Поиск осуществляется по ФИО плательщика
+        * Email : Поиск осуществляется по email плательщика
+        * Phone:  Поиск осуществляется по номеру телефона плательщика

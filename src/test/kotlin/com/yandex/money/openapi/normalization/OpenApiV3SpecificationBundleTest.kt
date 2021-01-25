@@ -24,6 +24,16 @@ class OpenApiV3SpecificationBundleTest {
     }
 
     @Test
+    fun should_test_success_with_paths_params_refs_bundle() {
+        val fileName = this.javaClass.getResource("test-success-with-paths-params-refs/dashboard-api.yaml")
+        val bundledSpecification = OpenApiV3SpecificationBundle(fileName.toURI()).bundle().bundledSpecification
+        val bundleTree = mapper.readTree(bundledSpecification)
+        val expectedResultFileName = this.javaClass.getResource("test-success-with-paths-params-refs/specification_expected_result.yaml")
+        val expectedTree = mapper.readTree(IOUtils.toString(expectedResultFileName))
+        Assert.assertEquals(bundleTree, expectedTree)
+    }
+
+    @Test
     fun should_success_bundle() {
         wireMockRule.stubFor(get(urlEqualTo("/domain.yaml"))
             .willReturn(aResponse().withBody(IOUtils.toString(this.javaClass.getResource("stubs/Domain.yaml")))))
