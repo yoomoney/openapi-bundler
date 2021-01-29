@@ -1,0 +1,506 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Схемы для работы с tag Refunds
+
+paths:
+
+  /refunds:
+    post:
+      summary: Создание заявки на возврат
+      description: Создание заявки на возврат
+      tags:
+        - Возвраты
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - $ref: 'domain.yaml#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RefundInitiationRequest
+              description: Запрос создания возврата
+              properties:
+                shopId:
+                  type: string
+                  pattern: '^\d+$'
+                  example: "468"
+                  description: |
+                    Идентификатор магазина
+                paymentId:
+                  type: string
+                  minLength: 1
+                  maxLength: 36
+                  example: "2000028645422"
+                  description: |
+                    Идентификатор исходного платежа
+                amount:
+                  allOf:
+                    - $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+                    - description: |
+                        Сумма к возврату. Значение должно быть больше 0, и если валюта не RUB должно быть меньше 1_000_000
+                description:
+                  type: string
+                  maxLength: 255
+                  description: Причина возврата
+                receipt:
+                  type: object
+                  title: RefundReceipt
+                  description: "Данные для возрата чека"
+                  properties:
+                    items:
+                      type: array
+                      maxLength: 100
+                      description: >
+                        Состав чека для возврата
+                        Валидация:
+                        - Поле quantity:
+                          1) Максимальное количество цифр после запятой 3
+                          2) Значение от 0 до 100_000 не включительно
+                        - Поле amount:
+                          1) Значение должно быть больше или равно 0
+                          2) Если валюта не RUB значение должно быть меньше 1_000_000
+                      items:
+                        $ref: '#/components/schemas/RefundItem'
+                  required:
+                    - items
+              required:
+                - shopId
+                - paymentId
+                - amount
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundInitRequest'
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                      - description: >
+                          Возврат нельзя провести:
+
+                          Коды ошибок:
+
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * RefundsNotAllowed - Возвраты не доступны для организации.
+                            * RequestLimitExceeded - Достигнуто макисмальное колличество обращения за период.
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - RefundsNotAllowed
+                              - RequestLimitExceeded
+                            example: RequestLimitExceeded
+                          resolveUrl:
+                            description: >
+                              URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+                            type: string
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+    get:
+      summary: Список заявок на возврат
+      description: Получение списка заявок на возврат
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          required: true
+          description: |
+            Идентификатор магазина
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Количество элементов в выдаче.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            example: 50
+            default: 10
+        - name: after
+          in: query
+          required: false
+          description: |
+            Метка страницы, используется при постраничном просмотре.
+            Метка следующей страницы возвращается в ответе.
+            Если следующей страницы нет, то значение отсутствует.
+          schema:
+            type: string
+      tags:
+        - Возвраты
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RefundsList
+                properties:
+                  after:
+                    #Метка на следующую страницу. Передается, чтобы клиент, вставив ее в запрос, получил доступ у следующей станице выдачи.
+                    #Если следующей страницы нет, то значение отсутствует.
+                    $ref: 'api-type-library.yaml#/components/schemas/After'
+                  items:
+                    type: array
+                    description: Список возвратов
+                    items:
+                      $ref: '#/components/schemas/RefundRequest'
+                required:
+                  - items
+
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /refunds/{refundId}:
+    get:
+      summary: Получение деталей возврата
+      description: Получение деталей заявки на возврат по её идентификатору
+      tags:
+        - Возвраты
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/RefundId'
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundRequest'
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+components:
+
+  parameters:
+
+    RefundId:
+      name: refundId
+      description: Id возврата
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    Refund:
+      description: Возврат
+      type: object
+      properties:
+        id:
+          type: string
+          description: идентификатор возврата на стороне ЯД
+        amount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        cause:
+          type: string
+          description: причина возврата
+        type:
+          $ref: '#/components/schemas/RefundType'
+        externalId:
+          type: string
+          description: идентификатор возврата на стороне к/а или paymentsRefundId
+          example: "REF2"
+        processedAt:
+          type: string
+          format: "date-time"
+          description: фактическое время возврата
+          example: "2018-11-19T17:05:07Z"
+        paymentReceipt:
+          $ref: 'payments.yaml#/components/schemas/PaymentReceipt'
+      required:
+        - id
+        - amount
+        - type
+        - externalId
+        - processedAt
+
+    BriefRefundAvailability:
+      description: Доступность возврата, доступные к возврату сумма
+      type: object
+      properties:
+        partial:
+          description: Доступен частичный возврат средств
+          type: boolean
+        full:
+          description: Доступен полный возврат средств
+          type: boolean
+        amount:
+          allOf:
+            - $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+            - description: Сумма возврата
+      required:
+        - partial
+        - full
+        - amount
+
+    RefundAvailability:
+      description: Доступность возврата, доступные к возврату сумма, позиции чека
+      type: object
+      properties:
+        partial:
+          description: Доступен частичный возврат средств
+          type: boolean
+        full:
+          description: Доступен полный возврат средств
+          type: boolean
+        amount:
+          allOf:
+            - $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+            - description: Сумма возврата
+        items:
+          type: array
+          description: Состав чека для возврата
+          items:
+            $ref: '#/components/schemas/RefundableItem'
+      required:
+        - partial
+        - full
+        - amount
+        - items
+
+    RefundableItem:
+      description: Позиция чека для возврата
+      allOf:
+        - $ref: '#/components/schemas/RefundItem'
+        - properties:
+            vat:
+              $ref: 'payments.yaml#/components/schemas/VatCodeTitle'
+            paymentMode:
+              $ref: 'invoices.yaml#/components/schemas/PaymentMode'
+            paymentSubject:
+              $ref: 'domain.yaml#/components/schemas/PaymentSubject'
+          required:
+            - vat
+
+    RefundItem:
+      type: object
+      description: Позиция чека для возврата
+      properties:
+        description:
+          type: string
+          maxLength: 128
+          description: |
+            Название позиции
+        quantity:
+          type: string
+          description: |
+            Количество товара по данной позиции
+        amount:
+          allOf:
+            - $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+            - description: Цена товара с учетом всех скидок и наценок
+        vatCode:
+          $ref: 'domain.yaml#/components/schemas/VatCode'
+      required:
+        - description
+        - quantity
+        - amount
+        - vatCode
+
+    RefundType:
+      type: string
+      enum:
+        - Full
+        - Partial
+      description: |
+        Тип возврата.
+         * Full : Полный возврат.
+         * Partial : Частичный возврат.
+
+    RefundInitRequest:
+      type: object
+      description: |
+        Инициализация заявки на возврат.
+      properties:
+        id:
+          type: string
+          example: "468"
+          description: идентификатор заявки на возврат
+        status:
+          $ref: '#/components/schemas/RefundRequestStatus'
+        paymentId:
+          type: string
+          example: "2000028645422"
+          description: идентификатор платежа
+        amount:
+          $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+        cause:
+          type: string
+          example: "Клиент не принял товар"
+          description: причина возврата
+        externalId:
+          type: string
+          description: внешний идентификатор заявки на возврат
+          example: "REF2"
+        createdAt:
+          type: string
+          format: "date-time"
+          description: дата и время создания заявки на возврат
+        updatedAt:
+          type: string
+          format: "date-time"
+          description: дата и время обновления заявки на возврат
+        login:
+          type: string
+          description: логин пользователя, создавшего заявку
+      required:
+        - id
+        - status
+        - paymentId
+        - amount
+        - errors
+        - externalId
+        - createdAt
+        - login
+
+    RefundRequest:
+      allOf:
+        - type: object
+          description: |
+            Заявка на возврат.
+            Сущность отображает все инициации возвратов, сделанные в личном кабинете.
+          properties:
+            errors:
+              description: ошибки при проведении возврата
+              type: array
+              items:
+                $ref: '#/components/schemas/RefundError'
+        - $ref: '#/components/schemas/RefundInitRequest'
+
+    RefundRequestStatus:
+      type: string
+      enum:
+        - Pending
+        - Successful
+        - Failed
+      description: |
+        Статус заявка на проведение возврата
+         * Pending: Заявка обрабатывается
+         * Successful: Заявка обработана успешно
+         * Failed: Заявка обработана с ошибкой, описание ошибки в поле error
+
+
+    RefundError:
+      type: string
+      enum:
+        - IllegalShopId
+        - IllegalPaymentId
+        - IllegalAmount
+        - IllegalCurrency
+        - IllegalCause
+        - ExternalIdDuplication
+        - AmountRemainderTooLow
+        - OperationForbidden
+        - InappropriateStatus
+        - RecipientAccountClosed
+        - AuthorizationRejected
+        - InsufficientFunds
+        - OperationNotSupported
+        - PartialRefundNotAllowed
+        - TechnicalError
+        - OrderRefused
+        - RefundExpired
+        - ForbiddenRefundWhenSettlementCompleted
+      description: |
+        Ошибки при проведении возврата
+        * IllegalShopId: Проверьте shopId: вы пытаетесь провести возврат платежа в другой магазин
+        * IllegalPaymentId: Проверьте номер транзакции: такого платежа в вашем магазине нет
+        * IllegalAmount: Вы пытаетесь вернуть больше, чем заплатил покупатель. Измените сумму и попробуйте еще раз
+        * IllegalCurrency: Пользователь заплатил в одной валюте, а вы делаете возврат в другой. Попробуйте еще раз
+        * IllegalCause: Выберите причину возврата и попробуйте еще раз. Если не помогает, напишите службе поддержки
+        * ExternalIdDuplication: Вы уже пытались провести возврат с тем же идентификатором. Попробуйте заново
+        * AmountRemainderTooLow: Частичный возврат должен быть меньше платежа хотя бы на 1 рубль. Сделайте полный возврат
+        * OperationForbidden: Магазину нельзя проводить возвраты платежей
+        * InappropriateStatus: Этот платеж нельзя вернуть (он не завершен, отменен или уже возвращен)
+        * RecipientAccountClosed: Счет плательщика закрыт, вернуть деньги не получится
+        * InsufficientFunds: Не получилось: сумма платежей за сегодня меньше этого возврата.
+        * OperationNotSupported: Платеж этим способом нельзя вернуть через ЮKassa. Вы можете вернуть деньги клиенту напрямую
+        * PartialRefundNotAllowed: При этом способе оплаты можно сделать только полный возврат
+        * TechnicalError: Возврат не прошел из-за технической ошибки. Попробуйте позже.
+        * OrderRefused: Возврат не прошел. Проверьте данные и условия
+        * RefundExpired: Этот платёж нельзя вернуть, срок возврата закончился
+        * ForbiddenRefundWhenSettlementCompleted: Этот платёж можно вернуть только по платежному поручению

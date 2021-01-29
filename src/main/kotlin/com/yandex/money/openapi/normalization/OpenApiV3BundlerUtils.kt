@@ -30,6 +30,10 @@ val mapper = ObjectMapper(yamlFactory)
 
 fun loadContent(location: URI): String = IOUtils.toString(location)
 
+fun createJsonRef(str: String): JsonRef {
+    return JsonRef.fromString(str.replace("{", "%7B").replace("}", "%7D"))
+}
+
 fun getTreeOrLoadToCache(jsonRef: JsonRef, cache: MutableMap<JsonRef, JsonNode>): JsonNode {
     val jsonNode: JsonNode? = cache[jsonRef]
     if (jsonNode != null) {

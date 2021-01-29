@@ -1,0 +1,523 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Схемы для работы с tag User
+
+paths:
+
+  /user:
+    get:
+      summary: Получение информации об аккаунте пользователя
+      description: Получение информации об аккаунте пользователя
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+      tags:
+        - Пользователь
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        400:
+          description: Запрос с указанными параметрами не может быть выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsSyntaxError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsParametersError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsHeadersError'
+                      - description: >
+                          Невозможно подтвердить платеж с заданными параметрами.
+
+                          Коды ошибок:
+
+                            * RuleViolation - Отказ по правилам бизнес-логики:
+                              * MerchantBoardingHasNotFinished - Контрагент находится в процессе подключения
+                              * AnyShopIsNotAvailable - Пользователю не доступен ни один магазин Контрагент
+                              * AlreadyExistingMerchantBoardingHasNotFinished - Контрагент был подключен к системе до появления ЛК и
+                          находится в процессе подключения
+                              * MerchantWasBanned - Контрагент заблокирован навсегда
+                              * EnrollmentRequired - Пользователь не зарегистрирован в Кассе
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - MerchantBoardingHasNotFinished
+                              - AnyShopIsNotAvailable
+                              - AlreadyExistingMerchantBoardingHasNotFinished
+                              - MerchantWasBanned
+                              - EnrollmentRequired
+                            example: MerchantWasBanned
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /user/capabilities:
+    get:
+      summary: |
+        Получение информации о доступности для использования функциональности в контексте пользователя, организации, магазинов и платежных шлюзов
+      description: |
+        Получение доступной для использования функциональности в контексте:
+        - пользователя и организации
+        - пользователя, организации и магазина;
+        - пользователя, организации и платежного шлюза (предполагается реализация в будущем).
+
+        Анализируется в частности роль пользователя, состояние организации, состояние магазина, состояние шлюза. Доступная функциональность
+        возвращается списком по указанным магазинам и платежным шлюзам.
+        Доступность в этом контексте не идентична понятию разрешение.
+        Пример:
+        Пользователь обладает разрешением на операцию создания магазина (исходя из присвоенной роли),
+        но при этом функциональность временно заблокирована для организации к которой он принадлежит
+
+      tags:
+        - Пользователь
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopIds
+          description: |
+            Идентификаторы магазинов (по которым запрашивается доступность функциональности).
+            Поле может отсутствовать, в этом случае, доступная функциональность в разрезе магазинов не возвращается.
+          in: query
+          required: false
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: 'domain.yaml#/components/schemas/ShopId'
+      security:
+        - yooid: []
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CapabilitiesResponse
+                description: |
+                  Получение информации о доступности для использования функциональности в контексте пользователя, организации,
+                  магазинов и платежных шлюзов.
+                properties:
+                  items:
+                    type: array
+                    description: |
+                      Список доступной функциональности. Клиент должен быть готов к расширению типов в списке.
+                      Необходимо игнорировать все неизвестные типы и capability
+                    items:
+                      x-one-of-name: BaseCapability
+                      oneOf:
+                        - $ref: '#/components/schemas/ShopCapability'
+                        - $ref: '#/components/schemas/UserCapability'
+                required:
+                  - items
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                      - description: >
+                          Нельзя получить информацию о доступности функциональности
+
+                          Коды ошибок:
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * TooMuchRequestedShops - Запрошена информация доступности функциональности по большому количеству магазинов (лимит - 100)
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - TooMuchRequestedShopIds
+                            example: TooMuchRequestedShopIds
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /counterparties:
+    get:
+      summary: Получение информации об организации пользователя
+      description: Получение информации об организации пользователя
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+      tags:
+        - Пользователь
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CounterpartiesResponse
+                description: Информация об организациях пользователя
+                properties:
+                  items:
+                    type: array
+                    description: Список данных об организации
+                    items:
+                      $ref: '#/components/schemas/Counterparty'
+                required:
+                  - items
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+components:
+  schemas:
+
+    User:
+      description: Пользователь
+      type: object
+      properties:
+        login:
+          type: string
+          description: Логин в системе
+          example: ivanov
+        roles:
+          type: array
+          description: Список ролей в различных организациях
+          items:
+            $ref: '#/components/schemas/UserRoleAssignment'
+          minItems: 1
+        settings:
+          $ref: '#/components/schemas/UserSettings'
+      required:
+        - login
+        - roles
+        - settings
+
+    UserRoleAssignment:
+      type: object
+      description: Роль пользователя
+      properties:
+        lifecycleId:
+          $ref: 'domain.yaml#/components/schemas/LifecycleId'
+        role:
+          $ref: '#/components/schemas/UserRole'
+      required:
+        - lifecycleId
+        - role
+
+    UserRole:
+      description: |
+        Роль пользователя
+        * `Owner` - владелец
+        * `Admin` - администратор
+        * `Operator` - оператор
+        * `Developer` - разработчик
+      type: string
+      enum:
+        - Owner
+        - Admin
+        - Operator
+        - Developer
+
+    UserSettings:
+      deprecated: true
+      description: Доступные настройки для пользователя
+      type: object
+      properties:
+        sendPushNotificationOnPayment:
+          type: boolean
+          description: Указывает, что пользователю нужно посылать пуш уведомления при оплате платежа
+        sendPushNotificationOnInvoicePayment:
+          type: boolean
+          description: Указывает, что пользователю нужно посылать пуш уведомления при оплате счета
+      required:
+        - sendPushNotificationOnPayment
+        - sendPushNotificationOnInvoicePayment
+
+    Counterparty:
+      description: Учетная запись партнера
+      type: object
+      properties:
+        companyTitle:
+          description: Название компании
+          type: string
+        lifecycleId:
+          $ref: 'domain.yaml#/components/schemas/LifecycleId'
+        shops:
+          description: Список доступных магазинов
+          type: array
+          items:
+            $ref: '#/components/schemas/BriefShop'
+        gates:
+          description: Список доступных шлюзов
+          type: array
+          items:
+            $ref: '#/components/schemas/BriefGate'
+      required:
+        - companyTitle
+        - lifecycleId
+        - shops
+        - gates
+
+    BriefShop:
+      description: Краткая информация о магазине
+      type: object
+      properties:
+        id:
+          $ref: 'domain.yaml#/components/schemas/ShopId'
+        title:
+          description: Имя магазина
+          type: string
+          example: Домашний пивовар
+        capabilities:
+          $ref: '#/components/schemas/ShopBriefCapabilities'
+        state:
+          $ref: '#/components/schemas/ShopState'
+        fiscalization:
+          $ref: '#/components/schemas/ShopFiscalization'
+        test:
+          description: Признак тестового магазина
+          type: boolean
+      required:
+        - id
+        - title
+        - capabilities
+        - state
+        - fiscalization
+        - test
+
+    ShopBriefCapabilities:
+      description: |
+        Информация о доступности выполнения определенных операций
+        !! Устарело, использовать /capabilities !!
+      type: object
+      deprecated: true
+      properties:
+        viewInvoices:
+          description: Доступность возможности просматривать счета
+          type: boolean
+        submitInvoices:
+          description: Доступность возможности выставлять счета
+          type: boolean
+      required:
+        - viewInvoices
+        - submitInvoices
+
+    ShopState:
+      description: |
+        Состояние магазина
+         * `Enabled` - Магазин выведен в online, работает
+         * `Disabled` - Магазин не выводился на online
+         * `Frozen` - Магазин выведен в online, приостановлен
+         * `Closed` - Магазин выведен в online, закрыт навсегда
+      type: string
+      enum:
+        - Enabled
+        - Disabled
+        - Frozen
+        - Closed
+
+    ShopFiscalization:
+      description: Настройки онлайн-кассы
+      type: object
+      properties:
+        state:
+          description: Признак, подключена онлайн-касса
+          type: string
+          enum:
+            - Enabled
+            - Disabled
+      required:
+        - state
+
+    BriefGate:
+      description: Краткая информация о шлюзе
+      type: object
+      properties:
+        id:
+          $ref: 'domain.yaml#/components/schemas/GateId'
+        title:
+          description: Имя шлюза
+          type: string
+          example: До зарплаты
+        state:
+          $ref: '#/components/schemas/GateState'
+      required:
+        - id
+        - title
+        - state
+
+    GateState:
+      description: |
+        Состояние шлюза
+         * `Enabled` - Активен.
+         * `Disabled` - Неактивен
+      type: string
+      enum:
+        - Enabled
+        - Disabled
+
+    ShopCapabilityType:
+      type: string
+      enum:
+        - ViewInvoices
+        - SubmitInvoices
+        - ViewPaymentsStatistics
+        - ViewInvoicesStatistics
+      description: |
+        Тип доступности:
+        * ViewInvoices: Доступность получения информации по счетам на оплату
+        * SubmitInvoices: Доступность выставления счета на оплату
+        * ViewPaymentsStatistics: Доступность получения платежной статистики
+          (сумма платежей за период, динамика роста суммы возвратов, изменение в течении времен кол-ва платежей и т.д.)
+        * ViewInvoicesStatistics: Доступность получения статистики по выставленным счетам
+          (сумма выставленных счетов, сумма оплаченных счетов, сумма неоплаченных счетов, средний чек по оплаченным счетам)
+
+
+    BaseCapability:
+      type: object
+      description: Показатель доступности функциональности
+      properties:
+        type:
+          description: Тип доступной функциональности
+          type: string
+          enum:
+            - Shop
+            - User
+        enabled:
+          description: Функциональность доступна или не доступна
+          type: boolean
+          example: true
+        error:
+          description: |
+            Причина недоступности функциональности - код бизнес-ошибки приложения
+            (Ошибки соответствуют ошибкам, возвращаемым при использовании функциональности)
+          type: string
+          example: "user_not_valid"
+      discriminator:
+        propertyName: type
+        mapping:
+          Shop: '#/components/schemas/ShopCapability'
+          User: '#/components/schemas/UserCapability'
+      required:
+        - enabled
+        - type
+
+    UserCapability:
+      allOf:
+        - $ref: '#/components/schemas/BaseCapability'
+      type: object
+      properties:
+        type:
+          description: |
+            Тип доступной функциональности.
+            Клиент должен быть готов к расширению списка. Необходимо игнорировать все неизвестные типы.
+          type: string
+          enum:
+            - User
+        capability:
+          type: string
+          enum:
+            - ChatWithSupport
+          description: |
+            Клиент должен быть готов к расширению списка. Необходимо игнорировать все неизвестные типы.
+            Тип доступности:
+            * ChatWithSupport: Доступность онлайн-чата с поддержкой
+      required:
+        - type
+        - capability
+
+    ShopCapability:
+      allOf:
+        - $ref: '#/components/schemas/BaseCapability'
+      type: object
+      properties:
+        type:
+          description: |
+            Тип доступной функциональности.
+            Клиент должен быть готов к расширению списка. Необходимо игнорировать все неизвестные типы.
+          type: string
+          enum:
+            - Shop
+        capability:
+          $ref: '#/components/schemas/ShopCapabilityType'
+        shopId:
+          $ref: 'domain.yaml#/components/schemas/ShopId'
+      required:
+        - type
+        - capability
+        - shopId

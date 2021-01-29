@@ -1,5 +1,7 @@
-### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_TYPE=MINOR
 ### NEXT_VERSION_DESCRIPTION_BEGIN
+* Добавлена поддержка path параметров в ref ссылках
+* Добавлен сбор и логирование ошибочных ссылок
 ### NEXT_VERSION_DESCRIPTION_END
 ## [2.4.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/4) (21-01-2021)
 

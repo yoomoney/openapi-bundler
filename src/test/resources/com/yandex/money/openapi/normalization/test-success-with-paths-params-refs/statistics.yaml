@@ -1,0 +1,485 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Схемы для работы с tag Statistics
+
+paths:
+
+  /statistics/time-series:
+    get:
+      summary: Получение данных изменения показателей во времени
+      description: |
+        Запрос на получение данных ключевых показателей
+        Пример:
+        Запрашиваются данные по сумме возвратов с месячным интервалом с 28 января до 3 апреля.
+        В ответе будет возвращена серия данных, состоящая из следующих пар значений:
+        - 28 января, сумма возвратов за период с 28 - 31 января
+        - 1 февраля, сумма возвратов за февраль
+        - 1 марта, сумма возвратов за март
+        - 1 апреля, сумма возвратов за период с 1 - 3 апреля
+      tags:
+        - Финансовая статистика
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          description: Идентификатор магазина
+          required: true
+          example: "12345"
+          schema:
+            type: string
+        - name: metricTypes
+          description: Типы показателей для получения значений. Описание параметра смотреть в блоке схемы /MetricType
+          in: query
+          required: true
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/MetricType'
+        - name: from
+          description: Дата начала запрашиваемого периода
+          in: query
+          required: true
+          schema:
+            type: string
+            format: 'date-time'
+        - name: till
+          description: Дата окончания запрашиваемого периода (включительно)
+          in: query
+          required: true
+          schema:
+            type: string
+            format: 'date-time'
+        - name: interval
+          description: Шаг разбиения данных
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/SummarizeInterval'
+        - name: shopArticleIds
+          description: Идентификаторы товаров магазина (для выборочного расчета показателей)
+          in: query
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Ответ с данными ключевых показателей
+                title: GetTimeSeriesResponse
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TimeSeries'
+                required:
+                  - items
+        400:
+          description: Запрос с указанными параметрами не может быть выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsSyntaxError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsParametersError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsHeadersError'
+                      - description: >
+                          Нельзя получить данные диаграмм
+
+                          Коды ошибок:
+                            * RuleViolation - Отказ по правилам бизнес-логики:
+                              * PeriodTooEarly - Передан период, начинающийся ранее 1 июля 2017
+                              * RequestedDataTooBig - Запрошен слишком большой объем данных.
+                                Существует ограничение в 2000 значений по каждому показателю.
+                                Исходя из этого при детализации DAY максимально допустимый запрашиваемый период 5 лет и 175 дней.
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - PeriodTooEarly
+                              - RequestedDataTooBig
+                            example: InvalidPeriodSize
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+  /statistics/total:
+    get:
+      summary: Получение суммарных значений показателей
+      description: |
+        Запрос на получение суммарных значений показателей за период,
+        и тенденций изменения показателей в сравнении с другим аналогичным периодом
+      tags:
+        - Финансовая статистика
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          description: Идентификатор магазина
+          required: true
+          example: "12345"
+          schema:
+            type: string
+        - name: metricTypes
+          description: Типы показателей для получения значений. Описание параметра смотреть в блоке схемы /MetricType
+          in: query
+          required: true
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/MetricType'
+        - name: from
+          description: Дата начала запрашиваемого периода
+          in: query
+          required: true
+          schema:
+            type: string
+            format: 'date-time'
+        - name: till
+          description: Дата окончания запрашиваемого периода (включительно)
+          in: query
+          required: true
+          schema:
+            type: string
+            format: 'date-time'
+        - name: basePeriodFrom
+          description: Дата начала периода для сравнения
+          in: query
+          required: true
+          schema:
+            type: string
+            format: 'date-time'
+        - name: basePeriodTill
+          description: Дата окончания периода для сравнения (включительно)
+          in: query
+          required: true
+          schema:
+            type: string
+            format: 'date-time'
+        - name: shopArticleIds
+          description: Идентификаторы товаров магазина (для выборочного расчета показателей)
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      security:
+        - yooid:
+            - merchant_dashboard:payment_info
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: GetTotalValuesResponse
+                description: Ответ с данными суммарных значений показателей за период
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TotalValue'
+                required:
+                  - items
+        400:
+          description: Запрос с указанными параметрами не может быть выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsSyntaxError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsParametersError'
+                      - $ref: 'api-type-library.yaml#/components/schemas/ArgumentsHeadersError'
+                      - description: >
+                          Нельзя получить данные диаграмм
+
+                          Коды ошибок:
+                            * RuleViolation - Отказ по правилам бизнес-логики:
+                              * PeriodTooEarly - Передан период, начинающийся ранее 1 июля 2017
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - PeriodTooEarly
+                            example: InvalidPeriodSize
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+components:
+
+  schemas:
+
+    DateNumberStat:
+      description: Значение в ряде данных по показателю
+      type: object
+      properties:
+        date:
+          type: string
+          description: Метка времени
+          format: 'date-time'
+          example: "2019-02-18T17:05:07Z"
+        value:
+          description: Числовое значение
+          type: string
+          example: "12.59"
+      required:
+        - date
+        - value
+
+    MetricType:
+      type: string
+      enum:
+        - TotalPaymentsNumber
+        - TotalPaymentRefundsAmount
+        - TotalPaymentRefundsNumber
+        - AveragePaymentReceiptAmount
+        - ProceedsAmount
+        - TotalInvoicesAmount
+        - TotalPaidInvoicesAmount
+        - TotalUnpaidInvoicesAmount
+        - AveragePaidInvoiceReceiptAmount
+      description: |
+        Типы данных по платежам и возвратам. Доступны при получении в команде /capabilities объекта ShopCapability c типом ViewPaymentsStatistics
+        * TotalPaymentsNumber - количество платежей
+        * TotalPaymentRefundsAmount - сумма возвратов
+        * TotalPaymentRefundsNumber - количество возвратов
+        * AveragePaymentReceiptAmount - средний чек платежа
+        * ProceedsAmount - выручка
+
+        Типы данных по выставленным счетам. Доступны при получении в команде /capabilities объекта ShopCapability c типом ViewInvoicesStatistics
+        * TotalInvoicesAmount - сумма выставленных счетов
+        * TotalPaidInvoicesAmount - сумма оплаченных счетов
+        * TotalUnpaidInvoicesAmount - сумма неоплаченных счетов
+        * AveragePaidInvoiceReceiptAmount - средний чек оплаченного счета
+
+    Unit:
+      type: object
+      description: Единица измерения
+      properties:
+        type:
+          type: string
+          description: Тип единицы измерения
+          enum:
+            - Quantity
+            - Percents
+            - Currency
+      discriminator:
+        propertyName: type
+        mapping:
+          Quantity: '#/components/schemas/QuantityUnit'
+          Percents: '#/components/schemas/PercentsUnit'
+          Currency: '#/components/schemas/CurrencyUnit'
+
+    QuantityUnit:
+      allOf:
+        - $ref: '#/components/schemas/Unit'
+      type: object
+      description: Количество
+      properties:
+        type:
+          type: string
+          enum:
+            - Quantity
+      required:
+        - type
+
+    PercentsUnit:
+      allOf:
+        - $ref: '#/components/schemas/Unit'
+      type: object
+      description: Проценты
+      properties:
+        type:
+          type: string
+          enum:
+            - Percents
+      required:
+        - type
+
+    CurrencyUnit:
+      allOf:
+        - $ref: '#/components/schemas/Unit'
+      type: object
+      description: Сумма в валюте
+      properties:
+        type:
+          type: string
+          enum:
+            - Currency
+        currency:
+          title: Код валюты, ISO-4217 3-alpha currency symbol
+          description: |
+            Код валюты, ISO-4217 3-alpha currency symbol, например:
+            RUB; USD; EUR; BYN; KZT. XXX в случае неизвестной валюты.
+          type: string
+          example: RUB
+      required:
+        - type
+        - currency
+
+    SummarizeInterval:
+      type: string
+      enum:
+        - Day
+        - Week
+        - Month
+        - Year
+      description: |
+        Шаг разбиения данных, календарный период
+        * Day : День (начинается с 00:00 по Москве)
+        * Week : Неделя (начинается с ПН)
+        * Month : Месяц (начинается с 1 числа)
+        * Year : Год
+
+    TimeSeries:
+      description: Данные изменения показателя во времени
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/MetricType'
+        interval:
+          $ref: '#/components/schemas/SummarizeInterval'
+        unit:
+          x-one-of-name: Unit
+          oneOf:
+            - $ref: '#/components/schemas/QuantityUnit'
+            - $ref: '#/components/schemas/CurrencyUnit'
+        series:
+          type: array
+          description: Ряд значений
+          x-sensitive: true
+          items:
+            $ref: '#/components/schemas/DateNumberStat'
+      required:
+        - type
+        - interval
+        - unit
+        - series
+
+    NumberStat:
+      type: object
+      description: Значение показателя
+      properties:
+        value:
+          description: Числовое занчение
+          type: string
+          example: "10.12"
+        unit:
+          description: Тип значения
+          x-one-of-name: Unit
+          oneOf:
+            - $ref: '#/components/schemas/QuantityUnit'
+            - $ref: '#/components/schemas/PercentsUnit'
+            - $ref: '#/components/schemas/CurrencyUnit'
+      required:
+        - value
+        - unit
+
+    TotalValue:
+      description: Изменение показателя за текущий период
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/MetricType'
+        relativeValue:
+          allOf:
+            - $ref: '#/components/schemas/NumberStat'
+            - description: Относительный прирост в процентах (может быть отрицательным)
+        absoluteValue:
+          allOf:
+            - $ref: '#/components/schemas/NumberStat'
+            - description: Сумма за текущий период
+      example:
+        type: AmountOfRefunds
+        relativeValue:
+          value: "10.12"
+          unit:
+            type: Percents
+        absoluteValue:
+          value: "230.12"
+          unit:
+            type: Currency
+            currency: "RUB"
+      required:
+        - type
+        - absoluteValue

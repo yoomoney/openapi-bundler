@@ -1,0 +1,57 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Схемы для работы с tag Online Chat
+
+paths:
+
+  /support-chat/token:
+    post:
+      summary: Возвращает JWT токен пользователя ЛК
+      description: |
+        Возвращает JWT токен пользователя ЛК для инициализации чата c поддержкой.
+        Вместо данной команды используйте [api threads](https://bitbucket.yamoney.ru/pages/API/api-guidelines/master/browse/resources/swagger-ui.html?url=https://bitbucket.yamoney.ru//pages/API/wallet-api-integration-specification/master/browsespecification/integration.yaml&title=integration#/default/get_threads_v1_token)
+      deprecated: true
+      tags:
+        - Чат с поддержкой
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CreateChatWithSupportTokenResponse
+                description: Сгенерированный токен для чата с поддержкой
+                properties:
+                  token:
+                    description: JWT токен для работы с онлайн-чатом
+                    type: string
+                required:
+                  - token
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'

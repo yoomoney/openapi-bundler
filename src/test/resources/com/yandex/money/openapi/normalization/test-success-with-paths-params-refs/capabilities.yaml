@@ -1,0 +1,183 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Схемы для работы с tag Capabilities
+
+paths:
+
+  /capabilities:
+    get:
+      summary: |
+        Получение информации о доступности для использования функциональности в контексте пользователя, организации, магазинов и платежных шлюзов
+      description: |
+        Не рекомендуется использовать команду из-за невозможности её расширять.
+        Для получения доступной функциональности следует использовать команду /user/capabilities
+
+        Получение доступной для использования функциональности в контексте:
+        - пользователя, организации и магазина;
+        - пользователя, организации и платежного шлюза (предполагается реализация в будущем).
+
+        Анализируется в частности роль пользователя, состояние организации, состояние магазина, состояние шлюза. Доступная функциональность
+        возвращается списком по указанным магазинам и платежным шлюзам.
+        Доступность в этом контексте не идентична понятию разрешение.
+        Пример:
+        Пользователь обладает разрешением на операцию создания магазина (исходя из присвоенной роли),
+        но при этом функционал временно заблокирован для организации к которой он принадлежит
+      deprecated: true
+      tags:
+        - Доступная функциональность
+      parameters:
+        - $ref: 'domain.yaml#/components/parameters/PassportAuthorization'
+        - $ref: 'domain.yaml#/components/parameters/Authorization'
+        - name: shopIds
+          description: Идентификаторы магазинов (по которым запрашивается доступность функциональности)
+          in: query
+          required: true
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: 'domain.yaml#/components/schemas/ShopId'
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        200:
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Ответ с информацией о доступности для использования функциональности в контексте пользователя, организации, магазинов и платежных шлюзов
+                title: GetCapabilitiesResponse
+                properties:
+                  items:
+                    description: Информации о доступности функциональности в разрезе магазинов
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeprecatedShopCapabilities'
+                required:
+                  - items
+        400:
+          $ref: 'api-type-library.yaml#/components/responses/ArgumentsError'
+        401:
+          $ref: 'domain.yaml#/components/responses/AuthenticationError'
+        403:
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: 'domain.yaml#/components/schemas/PermissionsCommonError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: 'domain.yaml#/components/schemas/PermissionRulesViolationCounterpartyError'
+                      - description: >
+                          Нельзя получить информацию о доступности функциональности
+
+                          Коды ошибок:
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * TooMuchRequestedShops - Запрошена информация доступности функциональности по большому количеству магазинов (лимит - 100)
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: RuleViolation
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - TooMuchRequestedShopIds
+                            example: TooMuchRequestedShopIds
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        500:
+          $ref: 'api-type-library.yaml#/components/responses/TechnicalError'
+
+components:
+
+  schemas:
+
+    DeprecatedShopCapability:
+      deprecated: true
+      description: Показатель доступности функциональности
+      allOf:
+        - $ref: '#/components/schemas/DeprecatedCapability'
+        - type: object
+          properties:
+            type:
+              $ref: 'user.yaml#/components/schemas/ShopCapabilityType'
+            shopId:
+              $ref: 'domain.yaml#/components/schemas/ShopId'
+          required:
+            - type
+            - shopId
+
+    DeprecatedCapabilities:
+      type: object
+      deprecated: true
+      description: Базовый тип для единиц измерений показателей статистики
+      properties:
+        type:
+          description: Тип показателя статистики
+          type: string
+          enum:
+            - Shop
+      discriminator:
+        propertyName: type
+        mapping:
+          Shop: '#/components/schemas/DeprecatedShopCapabilities'
+      required:
+        - type
+
+    DeprecatedShopCapabilities:
+      allOf:
+        - $ref: '#/components/schemas/DeprecatedCapabilities'
+      type: object
+      deprecated: true
+      description: Множество показателей доступности функциональности для магазина
+      properties:
+        id:
+          $ref: 'domain.yaml#/components/schemas/ShopId'
+        type:
+          type: string
+          description: Тип показателя статистики
+          enum:
+            - Shop
+        items:
+          type: array
+          description: Набор доступной функциональности
+          items:
+            $ref: '#/components/schemas/DeprecatedShopCapability'
+      required:
+        - id
+        - type
+        - items
+
+    DeprecatedCapability:
+      type: object
+      description: Показатель доступности функциональности
+      deprecated: true
+      properties:
+        enabled:
+          description: Функциональность доступна или не доступна
+          type: boolean
+          example: true
+        error:
+          description: |
+            Причина недоступности функциональности - код бизнес-ошибки приложения
+            (Ошибки соответствуют ошибкам, возвращаемым при использовании функциональности)
+          type: string
+          example: "user_not_valid"
+      required:
+        - enabled

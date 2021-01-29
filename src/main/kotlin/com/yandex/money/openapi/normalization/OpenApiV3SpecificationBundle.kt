@@ -16,6 +16,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
     private class CollectedData {
         var remoteRefContent: MutableMap<JsonRef, JsonNode> = mutableMapOf()
         var sourcesOfComponents: MutableMap<JsonPointer, MutableSet<URI>> = mutableMapOf()
+        var missingRefs: MutableSet<JsonRef> = mutableSetOf()
     }
 
     /**
@@ -45,6 +46,10 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
 
         processObjectNode(rootNode, baseJsonRef, collectedData)
         fill(rootNode, baseJsonRef, collectedData)
+
+        if (collectedData.missingRefs.isNotEmpty()) {
+            throw IllegalStateException("Some refs wasn't resolved: refs=${collectedData.missingRefs}")
+        }
 
         val conflictingNames: Map<String, Set<URI>> = collectedData.sourcesOfComponents
             .filter { entry -> entry.value.size > 1 }
@@ -96,7 +101,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
         collectedData: CollectedData,
         rootNode: ObjectNode
     ) {
-        val jsonRef = baseJsonRef.resolve(JsonRef.fromString(currentNode.asText()))
+        val jsonRef = baseJsonRef.resolve(createJsonRef(currentNode.asText()))
         if (jsonRef.pointer.toString().startsWith(hash)) {
             // ссылки, которые указывают на текущий документ не обрабатываются
             return
@@ -117,8 +122,12 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
 
                 // ищем ссылку в загруженном куске
                 val refNode = jsonRef.pointer.get(tree)
+                if (refNode == null) {
+                    collectedData.missingRefs.add(jsonRef)
+                    return
+                }
                 if (refNode.has(refKey) && refNode.fields().asSequence().toList().size == 1) {
-                    val nextRef = JsonRef.fromString(refNode.get(refKey).asText())
+                    val nextRef = createJsonRef(refNode.get(refKey).asText())
                     val nextRefTree: JsonNode = getTreeOrLoadToCache(nextRef, collectedData.remoteRefContent)
                     processObjectNode(nextRefTree, nextRef, collectedData)
                     rootNode.replace(refKey, TextNode.valueOf(locateRefOnCurrentDocument(nextRef)))
@@ -169,6 +178,9 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
                     addSourceOfComponent(currentJsonPointer, jsonRef, collectedData.sourcesOfComponents)
                 }
             }
+            if (targetComponentsChildNode.size() == 0) {
+                targetComponentsJsonNode.remove(entry.key)
+            }
         }
     }
 
@@ -197,14 +209,13 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
         collectedData.remoteRefContent.keys.forEach { jsonRef ->
             val refNode: JsonNode = getTreeOrLoadToCache(jsonRef, collectedData.remoteRefContent)
             // Наличие узла components в части документа с определением домена обязательно
-            if (refNode.has(components)) {
+            if (jsonRef.pointer.toString().contains(components) && refNode.has(components)) {
                 val sourceComponentsNode: JsonNode = refNode.findValue(components)
                 fillComponents(sourceComponentsNode, jsonRef, collectedData, targetComponentsJsonNode)
-            } else if (refNode.has(paths)) {
+            }
+            if (jsonRef.pointer.toString().contains(paths) && refNode.has(paths)) {
                 val sourcePathsNode: JsonNode = refNode.findValue(paths)
                 fillPaths(sourcePathsNode, jsonRef, collectedData, targetPathsJsonNode)
-            } else {
-                throw IllegalStateException("Specification part doesn't contain components: ref=$jsonRef")
             }
         }
     }
