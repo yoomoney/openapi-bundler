@@ -1,7 +1,7 @@
-### NEXT_VERSION_TYPE=MINOR
-### NEXT_VERSION_DESCRIPTION_BEGIN
+## [2.6.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/6) (19-02-2021)
+
 * Переименование yamoney-kotlin-module-plugin в ru.yoomoney.gradle.plugins.kotlin-plugin
-### NEXT_VERSION_DESCRIPTION_END
+
 ## [2.5.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/5) (29-01-2021)
 
 * Добавлена поддержка path параметров в ref ссылках
