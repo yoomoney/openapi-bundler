@@ -2,7 +2,7 @@ buildscript {
     apply from: 'project.gradle', to: buildscript
 }
 apply plugin: "yamoney-library-project-plugin"
-apply plugin: 'yamoney-kotlin-module-plugin'
+apply plugin: 'ru.yoomoney.gradle.plugins.kotlin-plugin'
 
 groupIdSuffix = "tools"
 artifactID = "yamoney-openapi-spec-bundler"
@@ -19,4 +19,3 @@ dependencies {
             "com.github.tomakehurst:wiremock:2.20.0"
 
 }
-
