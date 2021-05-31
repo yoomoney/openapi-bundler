@@ -93,4 +93,17 @@ class OpenApiV3SpecificationBundleTest {
         Assert.assertThat(conflictingTypeNames["/components/schemas/PermissionsError"]!!.toList()[1].toASCIIString(),
             StringEndsWith.endsWith("domain/Domain.yaml#"))
     }
+
+    @Test
+    fun should_successfully_bundle_when_components_response_contain_headers() {
+        val fileName = this.javaClass.getResource("test-headers/test-headers.yaml")
+        val bundledSpecification = OpenApiV3SpecificationBundle(fileName.toURI()).bundle().bundledSpecification
+
+        val bundleTree = mapper.readTree(bundledSpecification)
+
+        val expectedResultFileName = this.javaClass.getResource("test-headers/headers-success-result.yaml")
+        val expectedTree = mapper.readTree(IOUtils.toString(expectedResultFileName))
+
+        Assert.assertEquals(bundleTree, expectedTree)
+    }
 }

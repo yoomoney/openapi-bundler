@@ -46,7 +46,13 @@ fun getTreeOrLoadToCache(jsonRef: JsonRef, cache: MutableMap<JsonRef, JsonNode>)
 }
 
 fun findOrCreateObjectNode(key: String, parent: ObjectNode): ObjectNode {
-    var jsonNode: JsonNode? = parent.findValue(key)
+    var jsonNode: JsonNode? = null
+    for (field in parent.fields()) {
+        if (field.key == key) {
+            jsonNode = field.value
+            break
+        }
+    }
     if (jsonNode == null) {
         jsonNode = mapper.createObjectNode()
         parent.set(key, jsonNode)
