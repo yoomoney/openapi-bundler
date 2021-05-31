@@ -1,5 +1,13 @@
-### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_TYPE=PATCH
 ### NEXT_VERSION_DESCRIPTION_BEGIN
+
+* Исправлен баг, из-за которого в `components` не добавлялись `headers` из внешнего файла,
+  если в исходной спецификации был определен:
+  ```yaml
+  components:
+    response:
+  ```
+  у которого были определены `headers` (см пример в `src/test/resources/com/yandex/money/openapi/normalization/test-headers/test-headers.yaml`)
 ### NEXT_VERSION_DESCRIPTION_END
 ## [2.6.0](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/6) (19-02-2021)
 

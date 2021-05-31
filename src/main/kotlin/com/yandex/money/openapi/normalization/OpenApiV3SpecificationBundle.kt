@@ -198,7 +198,7 @@ class OpenApiV3SpecificationBundle(private val fileName: URI) {
             }
         }
 
-        val targetPathsJsonNode = findOrCreateObjectNode(paths, rootNode as ObjectNode)
+        val targetPathsJsonNode = findOrCreateObjectNode(paths, rootNode)
         targetPathsJsonNode.fields().forEach { entry ->
             entry.value.fields().forEach { sourceChildEntry ->
                 val currentJsonPointer = JsonPointer.of(paths, entry.key, sourceChildEntry.key)
