@@ -351,7 +351,7 @@ components:
     InstallationIdentifier:
       type: string
       description: Уникальный идентификатор (uuid) установки приложения на устройстве
-        Получать вызовом к [/installation-identifier](https://bitbucket.yamoney.ru/pages/API/api-guidelines/master/browse/resources/swagger-ui.html?url=https://bitbucket.yamoney.ru//pages/API/user-auth-center-api-specification/master/browsespecification/user-auth-center-mobile-api.yaml&title=user-auth-center-mobile-api#/default/get_installation_identifier)
+        Получать вызовом к [/installation-identifier](https://bitbucket.yooteam.ru/pages/API/api-guidelines/master/browse/resources/swagger-ui.html?url=https://bitbucket.yooteam.ru//pages/API/user-auth-center-api-specification/master/browsespecification/user-auth-center-mobile-api.yaml&title=user-auth-center-mobile-api#/default/get_installation_identifier)
       minLength: 1
       example: 'd504eb582a082fbd05680cd482d27beb'
 

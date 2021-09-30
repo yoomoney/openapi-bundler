@@ -11,7 +11,7 @@ paths:
       summary: Возвращает JWT токен пользователя ЛК
       description: |
         Возвращает JWT токен пользователя ЛК для инициализации чата c поддержкой.
-        Вместо данной команды используйте [api threads](https://bitbucket.yamoney.ru/pages/API/api-guidelines/master/browse/resources/swagger-ui.html?url=https://bitbucket.yamoney.ru//pages/API/wallet-api-integration-specification/master/browsespecification/integration.yaml&title=integration#/default/get_threads_v1_token)
+        Вместо данной команды используйте [api threads](https://bitbucket.yooteam.ru/pages/API/api-guidelines/master/browse/resources/swagger-ui.html?url=https://bitbucket.yooteam.ru//pages/API/wallet-api-integration-specification/master/browsespecification/integration.yaml&title=integration#/default/get_threads_v1_token)
       deprecated: true
       tags:
         - Чат с поддержкой

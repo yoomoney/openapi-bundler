@@ -1,5 +1,6 @@
-### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_TYPE=PATCH
 ### NEXT_VERSION_DESCRIPTION_BEGIN
+* Изменение ссылок bitbucket.yamoney.ru -> bitbucket.yooteam.ru, nexus.yamoney.ru -> nexus.yooteam.ru
 ### NEXT_VERSION_DESCRIPTION_END
 ## [2.6.1](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/7) (31-05-2021)
 
