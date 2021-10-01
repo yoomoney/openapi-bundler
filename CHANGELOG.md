@@ -1,7 +1,7 @@
-### NEXT_VERSION_TYPE=PATCH
-### NEXT_VERSION_DESCRIPTION_BEGIN
+## [2.6.2](https://bitbucket.yooteam.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/9) (01-10-2021)
+
 * Изменение ссылок bitbucket.yamoney.ru -> bitbucket.yooteam.ru, nexus.yamoney.ru -> nexus.yooteam.ru
-### NEXT_VERSION_DESCRIPTION_END
+
 ## [2.6.1](https://bitbucket.yamoney.ru/projects/BACKEND-TOOLS/repos/openapi-spec-bundler/pull-requests/7) (31-05-2021)
 
 * Исправлен баг, из-за которого в `components` не добавлялись `headers` из внешнего файла,
