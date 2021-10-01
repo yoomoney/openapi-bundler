@@ -8,15 +8,15 @@ components:
   schemas:
     # phone
     PhoneRef:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/phone.yaml#/components/schemas/Phone'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/phone.yaml#/components/schemas/Phone'
 
     # pagination
     After:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/pagination.yaml#/components/schemas/After'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/pagination.yaml#/components/schemas/After'
 
   parameters:
     # pagination
     After:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/pagination.yaml#/components/parameters/After'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/pagination.yaml#/components/parameters/After'
 
 paths: { }

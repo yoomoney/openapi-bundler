@@ -8,111 +8,111 @@ components:
   schemas:
     # phone
     Phone:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/phone.yaml#/components/schemas/Phone'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/phone.yaml#/components/schemas/Phone'
 
     # bank-card
     BankCardPanFragment:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardPanFragment'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardPanFragment'
     BankCardPan:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardPan'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardPan'
     BankCardExpiryYear:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardExpiryYear'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardExpiryYear'
     BankCardExpiryMonth:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardExpiryMonth'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardExpiryMonth'
     BankCardCsc:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardCsc'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/bank-card.yaml#/components/schemas/BankCardCsc'
 
     # monetary
     MonetaryAmount:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/monetary.yaml#/components/schemas/MonetaryAmount'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/monetary.yaml#/components/schemas/MonetaryAmount'
     CurrencyCode:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/monetary.yaml#/components/schemas/CurrencyCode'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/monetary.yaml#/components/schemas/CurrencyCode'
     Amount:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/monetary.yaml#/components/schemas/Amount'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/monetary.yaml#/components/schemas/Amount'
 
     # pagination.OpenApiV3SpecificationBundle.
     After:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/pagination.yaml#/components/schemas/After'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/pagination.yaml#/components/schemas/After'
 
     # responses
     ArgumentsSyntaxError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/ArgumentsSyntaxError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/ArgumentsSyntaxError'
     ArgumentsParametersError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/ArgumentsParametersError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/ArgumentsParametersError'
     ArgumentsHeadersError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/ArgumentsHeadersError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/ArgumentsHeadersError'
     AuthenticationCredentialsError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationCredentialsError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationCredentialsError'
     AuthenticationTokenError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationTokenError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationTokenError'
     AuthenticationSignatureError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationSignatureError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationSignatureError'
     AuthenticationInstanceIdError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationInstanceIdError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/AuthenticationInstanceIdError'
     PermissionsError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/PermissionsError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/schemas/PermissionsError'
   headers:
     # caching
     Cache-Control:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/caching.yaml#/components/headers/Cache-Control'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/caching.yaml#/components/headers/Cache-Control'
     ETag:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/caching.yaml#/components/headers/ETag'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/caching.yaml#/components/headers/ETag'
     Expires:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/caching.yaml#/components/headers/Expires'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/caching.yaml#/components/headers/Expires'
   responses:
     # responses
     Accepted:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/responses/Accepted'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/responses/Accepted'
     ArgumentsError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/responses/ArgumentsError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/responses/ArgumentsError'
     PermissionsError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/responses/PermissionsError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/responses/PermissionsError'
     NotFoundError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/responses/NotFoundError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/responses/NotFoundError'
     TooManyRequestsError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/responses/TooManyRequestsError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/responses/TooManyRequestsError'
     TechnicalError:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/responses.yaml#/components/responses/TechnicalError'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/responses.yaml#/components/responses/TechnicalError'
 
   parameters:
     # caching
     IfNoneMatch:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/caching.yaml#/components/parameters/IfNoneMatch'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/caching.yaml#/components/parameters/IfNoneMatch'
     ETag:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/caching.yaml#/components/parameters/ETag'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/caching.yaml#/components/parameters/ETag'
     IfModifiedSince:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/caching.yaml#/components/parameters/IfModifiedSince'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/caching.yaml#/components/parameters/IfModifiedSince'
 
     # pagination
     After:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/pagination.yaml#/components/parameters/After'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/pagination.yaml#/components/parameters/After'
     Limit:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/pagination.yaml#/components/parameters/Limit'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/pagination.yaml#/components/parameters/Limit'
 
     # internationalization
     AcceptLanguage:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/internationalization.yaml#/components/parameters/AcceptLanguage'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/internationalization.yaml#/components/parameters/AcceptLanguage'
 
     # authorization
     PassportAuthorization:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/PassportAuthorization'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/PassportAuthorization'
     PassportAuthorizationOptional:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/PassportAuthorizationOptional'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/PassportAuthorizationOptional'
     WalletAuthorization:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/WalletAuthorization'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/WalletAuthorization'
     WalletAuthorizationOptional:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/WalletAuthorizationOptional'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/WalletAuthorizationOptional'
     InstanceId:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/InstanceId'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/InstanceId'
     InstanceIdOptional:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/InstanceIdOptional'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/InstanceIdOptional'
     Authorization:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/Authorization'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/Authorization'
     AuthorizationOptional:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/AuthorizationOptional'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/authorization.yaml#/components/parameters/AuthorizationOptional'
     # useragent
     YoomoneyUserAgentMandatory:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/useragent.yaml#/components/parameters/YoomoneyUserAgent'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/useragent.yaml#/components/parameters/YoomoneyUserAgent'
     YoomoneyUserAgentOptional:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.0.0/useragent.yaml#/components/parameters/YoomoneyUserAgentOptional'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.0.0/useragent.yaml#/components/parameters/YoomoneyUserAgentOptional'
 paths: { }

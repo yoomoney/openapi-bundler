@@ -8,10 +8,10 @@ components:
   headers:
     # caching
     Cache-Control:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.1.0/caching.yaml#/components/headers/Cache-Control'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.1.0/caching.yaml#/components/headers/Cache-Control'
     ETag:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.1.0/caching.yaml#/components/headers/ETag'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.1.0/caching.yaml#/components/headers/ETag'
     Expires:
-      $ref: 'https://nexus.yamoney.ru/api-type-library/3.1.0/caching.yaml#/components/headers/Expires'
+      $ref: 'https://nexus.yooteam.ru/api-type-library/3.1.0/caching.yaml#/components/headers/Expires'
 
 paths: { }
