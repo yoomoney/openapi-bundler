@@ -1,0 +1,2101 @@
+openapi: 3.0.1
+info:
+  version: 4.0.4
+  title: YooMoney Dashboard API
+servers:
+  - url: https://hostname/api
+tags:
+  - name: Возвраты
+  - name: Нотификации
+paths:
+  /refunds:
+    post:
+      summary: Создание заявки на возврат
+      description: Создание заявки на возврат
+      tags:
+        - Возвраты
+      parameters:
+        - $ref: '#/components/parameters/PassportAuthorization'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RefundInitiationRequest
+              description: Запрос создания возврата
+              properties:
+                shopId:
+                  type: string
+                  pattern: ^\d+$
+                  example: '468'
+                  description: |
+                    Идентификатор магазина
+                paymentId:
+                  type: string
+                  minLength: 1
+                  maxLength: 36
+                  example: '2000028645422'
+                  description: |
+                    Идентификатор исходного платежа
+                amount:
+                  allOf:
+                    - $ref: '#/components/schemas/MonetaryAmount'
+                    - description: |
+                        Сумма к возврату. Значение должно быть больше 0, и если валюта не RUB должно быть меньше 1_000_000
+                description:
+                  type: string
+                  maxLength: 255
+                  description: Причина возврата
+                receipt:
+                  type: object
+                  title: RefundReceipt
+                  description: Данные для возрата чека
+                  properties:
+                    items:
+                      type: array
+                      maxLength: 100
+                      description: |
+                        Состав чека для возврата Валидация: - Поле quantity:
+                          1) Максимальное количество цифр после запятой 3
+                          2) Значение от 0 до 100_000 не включительно
+                        - Поле amount:
+                          1) Значение должно быть больше или равно 0
+                          2) Если валюта не RUB значение должно быть меньше 1_000_000
+                      items:
+                        $ref: '#/components/schemas/RefundItem'
+                  required:
+                    - items
+              required:
+                - shopId
+                - paymentId
+                - amount
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundInitRequest'
+        "400":
+          $ref: '#/components/responses/ArgumentsError'
+        "401":
+          $ref: '#/components/responses/AuthenticationError'
+        "403":
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: '#/components/schemas/PermissionsCommonError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationCounterpartyError'
+                      - description: |
+                          Возврат нельзя провести:
+                          Коды ошибок:
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * RefundsNotAllowed - Возвраты не доступны для организации.
+                            * RequestLimitExceeded - Достигнуто макисмальное колличество обращения за период.
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: 'RuleViolation'
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - RefundsNotAllowed
+                              - RequestLimitExceeded
+                            example: 'RequestLimitExceeded'
+                          resolveUrl:
+                            description: |
+                              URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+                            type: string
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        "500":
+          $ref: '#/components/responses/TechnicalError'
+    get:
+      summary: Список заявок на возврат
+      description: Получение списка заявок на возврат
+      parameters:
+        - $ref: '#/components/parameters/PassportAuthorization'
+        - $ref: '#/components/parameters/Authorization'
+        - name: shopId
+          in: query
+          required: true
+          description: |
+            Идентификатор магазина
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Количество элементов в выдаче.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            example: 50
+            default: 10
+        - name: after
+          in: query
+          required: false
+          description: |
+            Метка страницы, используется при постраничном просмотре.
+            Метка следующей страницы возвращается в ответе.
+            Если следующей страницы нет, то значение отсутствует.
+          schema:
+            type: string
+      tags:
+        - Возвраты
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RefundsList
+                properties:
+                  after:
+                    $ref: '#/components/schemas/After'
+                  items:
+                    type: array
+                    description: Список возвратов
+                    items:
+                      $ref: '#/components/schemas/RefundRequest'
+                required:
+                  - items
+        "400":
+          $ref: '#/components/responses/ArgumentsError'
+        "401":
+          $ref: '#/components/responses/AuthenticationError'
+        "403":
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: '#/components/schemas/PermissionsCommonError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        "500":
+          $ref: '#/components/responses/TechnicalError'
+  /refunds/{refundId}:
+    get:
+      summary: Получение деталей возврата
+      description: Получение деталей заявки на возврат по её идентификатору
+      tags:
+        - Возвраты
+      parameters:
+        - $ref: '#/components/parameters/PassportAuthorization'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/RefundId'
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundRequest'
+        "400":
+          $ref: '#/components/responses/ArgumentsError'
+        "401":
+          $ref: '#/components/responses/AuthenticationError'
+        "403":
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: '#/components/schemas/PermissionsCommonError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationUserError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationShopError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationCounterpartyError'
+                required:
+                  - error
+        "500":
+          $ref: '#/components/responses/TechnicalError'
+  /notifications/push:
+    get:
+      summary: Получение информации о push-уведомлениях пользователя для конкретного устройства
+      description: Получение информации о push-уведомлениях пользователя для конкретного устройства
+      parameters:
+        - $ref: '#/components/parameters/PassportAuthorization'
+        - $ref: '#/components/parameters/Authorization'
+        - name: uuid
+          description: Уникальный идентификатор (uuid) установки приложения на устройстве
+          in: query
+          example: d504eb582a082fbd05680cd482d27beb
+          required: true
+          schema:
+            $ref: '#/components/schemas/InstallationIdentifier'
+      tags:
+        - Нотификации
+      security:
+        - yooid:
+            - merchant_dashboard:profile
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushNotificationSettings'
+        "400":
+          description: Запрос с указанными параметрами не может быть выполнен.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: '#/components/schemas/ArgumentsSyntaxError'
+                      - $ref: '#/components/schemas/ArgumentsParametersError'
+                      - $ref: '#/components/schemas/ArgumentsHeadersError'
+                      - description: |
+                          Невозможно получить информацию о push-уведомлениях пользователя:
+                          Коды ошибок:
+                          * RuleViolation - Отказ по правилам бизнес-логики:
+                            * NoPushNotificationSettingsFound - Не найдена информация о настройках push-уведомлений для заданного устройства пользователя.
+                        type: object
+                        properties:
+                          type:
+                            description: Причина отказа в проведении операции - правило бизнес-логики.
+                            type: string
+                            enum:
+                              - RuleViolation
+                            example: 'RuleViolation'
+                          rule:
+                            description: Код правила бизнес-логики.
+                            type: string
+                            enum:
+                              - NoPushNotificationSettingsFound
+                            example: 'NoPushNotificationSettingsFound'
+                        required:
+                          - type
+                          - rule
+                required:
+                  - error
+        "401":
+          $ref: '#/components/responses/AuthenticationError'
+        "403":
+          description: Ответ о запрете выполнения запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    oneOf:
+                      - $ref: '#/components/schemas/PermissionsCommonError'
+                      - $ref: '#/components/schemas/PermissionRulesViolationUserError'
+                required:
+                  - error
+        "500":
+          $ref: '#/components/responses/TechnicalError'
+components:
+  securitySchemes: {}
+  schemas:
+    MonetaryAmount:
+      description: Сумма в выбранной валюте.
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+      required:
+        - value
+        - currency
+    Amount:
+      description: Десятичное число с фиксированной точкой в строковом представлении.
+      type: string
+      pattern: (\d+\.\d{2}|\d+)
+      example: 100.0
+    CurrencyCode:
+      description: Код валюты, ISO-4217 3-alpha currency symbol.
+      type: string
+      pattern: '[A-Z]{3}'
+      example: 'RUB'
+    ArgumentsSyntaxError:
+      title: ArgumentsSyntaxError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * Нарушен синтаксис запроса, запрос невозможно разобрать;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - SyntaxError
+          example: 'SyntaxError'
+      required:
+        - type
+    ArgumentsParametersError:
+      title: ArgumentsParametersError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * Параметры запроса отсутствуют или имеют недопустимое значение;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - IllegalParameters
+          example: 'IllegalParameters'
+        parameterNames:
+          description: Список наименований и путей параметров, содержащих некорректные значения. Присутствует при type=IllegalParameters.
+          type: array
+          items:
+            type: string
+            example: 'amount'
+            description: |
+              Имя параметра включая его полный путь в JSON документе. Поле вложенного объекта указывается через точку. Номер элемента списка указывается в квадратных скобках.
+              Примеры:
+
+                * currency
+                * amount.value
+                * options[0].amount.value
+      required:
+        - type
+        - parameterNames
+    ArgumentsHeadersError:
+      title: ArgumentsHeadersError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * HTTP-заголовоки запроса отсутствуют или имеют недопустимое значение;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - IllegalHeaders
+          example: 'IllegalHeaders'
+        headerNames:
+          description: Список наименований заголовков запроса, содержащих некорректные значения. Присутствует при type=IllegalHeaders.
+          type: array
+          items:
+            type: string
+            example: 'Authorization'
+      required:
+        - type
+        - headerNames
+    VatCode:
+      type: integer
+      format: int32
+      enum:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+      x-enum-varnames:
+        - WITHOUT_VAT
+        - VAT_ZERO_RATE
+        - VAT_REDUCED_RATE
+        - VAT_COMMON_RATE
+        - VAT_REDUCED_BILLING_RATE
+        - VAT_COMMON_BILLING_RATE
+      description: |
+        Идентификатор ставки НДС.
+        Возможные значения:
+        * 1: Без НДС
+        * 2: НДС чека по ставке 0%
+        * 3: НДС чека по ставке 10%
+        * 4: НДС чека по ставке 20%
+        * 5: НДС чека по расчетной ставке 10/110
+        * 6: НДС чека по расчетной ставке 20/120
+    AuthenticationTokenError:
+      title: AuthenticationTokenError
+      description: |
+        Запрос не может быть выполнен — ошибка аутентификационных данных клиента.
+        * InvalidToken - Отсутствует или недействительна OAuth2 авторизация кошелька.
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - InvalidToken
+          example: 'InvalidToken'
+      required:
+        - type
+    ShopId:
+      description: Идентификатор магазина
+      type: string
+      example: 1231
+    RefundItem:
+      type: object
+      description: Позиция чека для возврата
+      properties:
+        description:
+          type: string
+          maxLength: 128
+          description: |
+            Название позиции
+        quantity:
+          type: string
+          description: |
+            Количество товара по данной позиции
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/MonetaryAmount'
+            - description: Цена товара с учетом всех скидок и наценок
+        vatCode:
+          $ref: '#/components/schemas/VatCode'
+      required:
+        - description
+        - quantity
+        - amount
+        - vatCode
+    RefundInitRequest:
+      type: object
+      description: |
+        Инициализация заявки на возврат.
+      properties:
+        id:
+          type: string
+          example: '468'
+          description: идентификатор заявки на возврат
+        status:
+          $ref: '#/components/schemas/RefundRequestStatus'
+        paymentId:
+          type: string
+          example: '2000028645422'
+          description: идентификатор платежа
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        cause:
+          type: string
+          example: 'Клиент не принял товар'
+          description: причина возврата
+        externalId:
+          type: string
+          description: внешний идентификатор заявки на возврат
+          example: 'REF2'
+        createdAt:
+          type: string
+          format: date-time
+          description: дата и время создания заявки на возврат
+        updatedAt:
+          type: string
+          format: date-time
+          description: дата и время обновления заявки на возврат
+        login:
+          type: string
+          description: логин пользователя, создавшего заявку
+      required:
+        - id
+        - status
+        - paymentId
+        - amount
+        - errors
+        - externalId
+        - createdAt
+        - login
+    PermissionsCommonError:
+      description: |
+        Запрос не может быть выполнен — Клиент не обладает достаточными правами, или состояние учетной записи клиента не позволяет совершить операцию.
+
+        Коды ошибок:
+        * InvalidScope - Указанная авторизация клиента не обладает достаточными правами для совершения этой операции.
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - InvalidScope
+          example: 'InvalidScope'
+      required:
+        - type
+    PermissionRulesViolationUserError:
+      description: |
+        Операция не доступна для пользователя
+
+        Коды ошибок:
+
+        * RuleViolation - Отказ по правилам бизнес-логики:
+           * UserNotFound - Информация о пользователе отсутсвует в части системы.
+           * UnavailableForUser - У пользователя нет прав на такую операцию (например из-за роли).
+      type: object
+      properties:
+        type:
+          description: Причина отказа в операции - правило бизнес-логики.
+          type: string
+          enum:
+            - RuleViolation
+          example: 'RuleViolation'
+        rule:
+          description: Код правила бизнес-логики.
+          type: string
+          enum:
+            - UserNotFound
+            - UnavailableForUser
+          example: 'UnavailableForUser'
+        resolveUrl:
+          description: |
+            URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+          type: string
+      required:
+        - type
+        - rule
+    PermissionRulesViolationShopError:
+      description: |
+        Операция не доступна для пользователя
+
+        Коды ошибок:
+
+        * RuleViolation - Отказ по правилам бизнес-логики:
+          * ShopNotFound - Магазина нет в системе.
+          * UnavailableForShop - Операция недоступна для данного магазина (например отключен).
+      type: object
+      properties:
+        type:
+          description: Причина отказа в операции - правило бизнес-логики.
+          type: string
+          enum:
+            - RuleViolation
+          example: 'RuleViolation'
+        rule:
+          description: Код правила бизнес-логики.
+          type: string
+          enum:
+            - ShopNotFound
+            - UnavailableForShop
+          example: 'UnavailableForShop'
+        resolveUrl:
+          description: |
+            URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+          type: string
+      required:
+        - type
+        - rule
+    PermissionRulesViolationCounterpartyError:
+      description: |
+        Операция не доступна для пользователя
+
+        Коды ошибок:
+
+        * RuleViolation - Отказ по правилам бизнес-логики:
+           * CounterpartyNotFound - Организации нет в системе.
+           * UnavailableForCounterparty - Операция недоступна для данной организации.
+      type: object
+      properties:
+        type:
+          description: Причина отказа в операции - правило бизнес-логики.
+          type: string
+          enum:
+            - RuleViolation
+          example: 'RuleViolation'
+        rule:
+          description: Код правила бизнес-логики.
+          type: string
+          enum:
+            - CounterpartyNotFound
+            - UnavailableForCounterparty
+          example: 'UnavailableForCounterparty'
+        resolveUrl:
+          description: |
+            URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+          type: string
+      required:
+        - type
+        - rule
+    After:
+      description: Токен запроса следующей страницы данных.
+      example: '01234567890ABCDEF'
+      type: string
+    RefundRequest:
+      allOf:
+        - type: object
+          description: |
+            Заявка на возврат.
+            Сущность отображает все инициации возвратов, сделанные в личном кабинете.
+          properties:
+            errors:
+              description: ошибки при проведении возврата
+              type: array
+              items:
+                $ref: '#/components/schemas/RefundError'
+        - $ref: '#/components/schemas/RefundInitRequest'
+    RefundType:
+      type: string
+      enum:
+        - Full
+        - Partial
+      description: |
+        Тип возврата.
+         * Full : Полный возврат.
+         * Partial : Частичный возврат.
+    PaymentReceipt:
+      type: object
+      description: чек
+      properties:
+        customerContact:
+          type: string
+          description: Контактные данные о покупателе (телефон или email)
+          example: 'my@mail.ru'
+        status:
+          $ref: '#/components/schemas/PaymentReceiptStatus'
+        items:
+          type: array
+          description: Позиции в чеке
+          items:
+            $ref: '#/components/schemas/PaymentReceiptItem'
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/MonetaryAmount'
+            - description: Сумма товарных позиций чека
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата создания чека
+          example: '2018-11-19T17:05:07Z'
+        registeredAt:
+          type: string
+          format: date-time
+          description: Дата и время формирования чека в фискальном накопителе.
+          example: '2018-11-19T17:05:07Z'
+        fiscalReceiptNumber:
+          type: string
+          description: Номер фискального документа.
+          example: '3986'
+        fiscalStorageNumber:
+          type: string
+          description: Номер фискального накопителя в кассовом аппарате.
+          example: '9288000100115785'
+        fiscalAttribute:
+          type: string
+          description: Фискальный признак чека. Формируется фискальным накопителем на основе данных, переданных для регистрации чека.
+          example: '2617603921'
+        fiscalProviderId:
+          type: string
+          description: Идентификатор чека в онлайн-кассе. Присутствует, если чек удалось зарегистрировать.
+          example: 'fd9e9404-eaca-4000-8ec9-dc228ead2345'
+      required:
+        - customerContact
+        - status
+        - items
+        - amount
+    PaymentType:
+      type: string
+      enum:
+        - YooMoney
+        - BankCard
+        - MobileBalance
+        - AlfaBank
+        - WebMoney
+        - Cash
+        - Psb
+        - Sberbank
+        - SberbankBusiness
+        - MasterPass
+        - MPos
+        - Qiwi
+        - PayLate
+        - KupiVKredit
+        - TinkoffInvoicing
+        - CashInCis
+        - Erip
+        - Installments
+        - WeChat
+        - Unknown
+      description: |
+        * YooMoney : ЮMoney
+        * BankCard : Банковская карта
+        * MobileBalance:  Баланс телефона
+        * AlfaBank : Альфа-Клик
+        * WebMoney :  Webmoney
+        * Cash : Наличные
+        * Psb : Промсвязьбанк
+        * Sberbank : Cбербанк-онлайн
+        * SberbankBusiness : Бизнес Cбербанк-онлайн
+        * MasterPass : MasterPass
+        * MPos : Мобильный терминал (mPOS)
+        * Qiwi : QIWI кошелек
+        * PayLate : PayLate
+        * KupiVKredit : КупиВкредит
+        * TinkoffInvoicing : Tinkoff
+        * CashInCis : Наличные не в России
+        * Erip : ЕРИП (Беларусь)
+        * Installments : Заплатить по частям
+        * WeChat : WeChat Pay
+        * Unknown : Неизвестный тип
+        Возможно появление новых способов оплаты. Рекоменуется задать текст и иконку по умолчанию.
+    PaymentStatus:
+      description: |
+        статус платежа
+        * Succeeded : Успешный платёж
+        * Pending : Не оплачен
+        * Processing : В обработке
+        * RefundedPartially : Частичный возврат
+        * Refunded : Возврат
+        * Canceled : Отмена
+        * Failed : Ошибка при оплате
+        * WaitingForCapture : Ожидает подтверждения
+        * Unknown : Неизвестен
+      type: string
+      enum:
+        - Succeeded
+        - Pending
+        - Processing
+        - RefundedPartially
+        - Refunded
+        - Canceled
+        - Failed
+        - WaitingForCapture
+        - Unknown
+    PaymentSource:
+      description: |
+        Источники платежа
+        Invoice - Операции по счетам
+      type: string
+      enum:
+        - Invoice
+    PaymentBrief:
+      description: Краткая информация о платеже
+      type: object
+      properties:
+        id:
+          description: Id платежа
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        createdAt:
+          description: Дата создания платежа
+          type: string
+          format: date-time
+          example: '2018-11-19T17:05:07Z'
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        type:
+          $ref: '#/components/schemas/PaymentType'
+        receiptStatus:
+          $ref: '#/components/schemas/PaymentReceiptStatus'
+        refundAvailability:
+          $ref: '#/components/schemas/BriefRefundAvailability'
+        cancelAvailability:
+          $ref: '#/components/schemas/CancelPaymentAvailability'
+        captureAvailability:
+          $ref: '#/components/schemas/CapturePaymentAvailability'
+        customerNumber:
+          type: string
+          description: Идентификатор клиента магазина
+        protocol:
+          x-one-of-name: Protocol
+          oneOf:
+            - $ref: '#/components/schemas/EmailProtocol'
+            - $ref: '#/components/schemas/HttpProtocol'
+            - $ref: '#/components/schemas/ApiV2Protocol'
+            - $ref: '#/components/schemas/ApiV3Protocol'
+            - $ref: '#/components/schemas/CustomProtocol'
+      required:
+        - id
+        - status
+        - createdAt
+        - amount
+        - type
+        - refundAvailability
+        - cancelAvailability
+        - captureAvailability
+        - protocol
+    Payment:
+      description: Платеж
+      type: object
+      properties:
+        id:
+          description: Id платежа
+          type: string
+          example: 12345
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        createdAt:
+          description: Дата создания платежа
+          type: string
+          format: date-time
+          example: '2018-11-19T17:05:07Z'
+        updatedAt:
+          description: Дата изменения статуса платежа
+          type: string
+          format: date-time
+          example: '2018-11-19T17:05:07Z'
+        customerNumber:
+          type: string
+          description: Идентификатор клиента магазина
+        orderNumber:
+          type: string
+          description: Идентификатор заказа на стороне магазина
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        protocol:
+          x-one-of-name: Protocol
+          oneOf:
+            - $ref: '#/components/schemas/EmailProtocol'
+            - $ref: '#/components/schemas/HttpProtocol'
+            - $ref: '#/components/schemas/ApiV2Protocol'
+            - $ref: '#/components/schemas/ApiV3Protocol'
+            - $ref: '#/components/schemas/CustomProtocol'
+        method:
+          x-one-of-name: PaymentMethod
+          oneOf:
+            - $ref: '#/components/schemas/YooMoneyPayment'
+            - $ref: '#/components/schemas/BankCardPayment'
+            - $ref: '#/components/schemas/MobileBalancePayment'
+            - $ref: '#/components/schemas/ExternalOperationPayment'
+            - $ref: '#/components/schemas/AlternativePayment'
+        receipt:
+          $ref: '#/components/schemas/PaymentReceipt'
+        refunds:
+          type: array
+          description: Список данных по возвратам
+          items:
+            $ref: '#/components/schemas/Refund'
+        refundAvailability:
+          $ref: '#/components/schemas/RefundAvailability'
+        cancelAvailability:
+          $ref: '#/components/schemas/CancelPaymentAvailability'
+        captureAvailability:
+          $ref: '#/components/schemas/CapturePaymentAvailability'
+        errorCode:
+          $ref: '#/components/schemas/PaymentErrorCode'
+      required:
+        - id
+        - status
+        - createdAt
+        - amount
+        - protocol
+        - method
+        - refunds
+        - refundAvailability
+        - cancelAvailability
+        - captureAvailability
+    PaymentReceiptStatus:
+      type: string
+      enum:
+        - Processing
+        - Delivered
+        - Fail
+        - Unknown
+      description: |
+        Статус фискального чека
+         * Processing : чек создан/отправлен
+         * Delivered : чек доставлен;
+         * Fail : не удалось доставить чек;
+         * Unknown : статус неизвестен;
+    BriefRefundAvailability:
+      description: Доступность возврата, доступные к возврату сумма
+      type: object
+      properties:
+        partial:
+          description: Доступен частичный возврат средств
+          type: boolean
+        full:
+          description: Доступен полный возврат средств
+          type: boolean
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/MonetaryAmount'
+            - description: Сумма возврата
+      required:
+        - partial
+        - full
+        - amount
+    RefundableItem:
+      description: Позиция чека для возврата
+      allOf:
+        - $ref: '#/components/schemas/RefundItem'
+        - properties:
+            vat:
+              $ref: '#/components/schemas/VatCodeTitle'
+            paymentMode:
+              $ref: '#/components/schemas/PaymentMode'
+            paymentSubject:
+              $ref: '#/components/schemas/PaymentSubject'
+          required:
+            - vat
+    VatCodeTitle:
+      type: string
+      example: '20%, 10/110'
+      description: |
+        Понятное для человека описание идентификатор ставки НДС.
+        Например VatCode = 4 это 18% для товаров купленных до 1 января 2019г но 20% после 1 января 2019г
+        Возможные значения:
+        * '': Без НДС
+        * '0%': НДС чека по ставке 0%
+        * '10%': НДС чека по ставке 10%
+        * '18%': НДС чека по ставке 18%
+        * '20%': НДС чека по ставке 20%
+        * '10/110': НДС чека по расчетной ставке 10/110
+        * '18/118': НДС чека по расчетной ставке 18/118
+        * '20/120': НДС чека по расчетной ставке 20/120
+    CancelPaymentAvailability:
+      description: Доступность отмены платежа
+      type: object
+      properties:
+        enabled:
+          description: Признак доступности операции отмены для текущего платежа
+          type: boolean
+      required:
+        - enabled
+    CapturePaymentAvailability:
+      description: Доступность подтверждения платежа
+      type: object
+      properties:
+        enabled:
+          description: Признак доступности операции подтверждения для текущего платежа
+          type: boolean
+      required:
+        - enabled
+    EmailProtocol:
+      allOf:
+        - $ref: '#/components/schemas/Protocol'
+      description: Данные специфичные для email протокола
+      type: object
+      properties:
+        type:
+          type: string
+          description: Тип протокола
+          enum:
+            - Email
+        invoiceId:
+          type: string
+          description: Идентификатор платежа
+      required:
+        - type
+        - invoiceId
+    HttpProtocol:
+      allOf:
+        - $ref: '#/components/schemas/Protocol'
+      description: Данные специфичные для http протокола
+      type: object
+      properties:
+        type:
+          type: string
+          description: Тип протокола
+          enum:
+            - Http
+        invoiceId:
+          type: string
+          description: Идентификатор платежа
+      required:
+        - type
+        - invoiceId
+    ApiV2Protocol:
+      allOf:
+        - $ref: '#/components/schemas/Protocol'
+      description: Данные специфичные для api v2 протокола
+      type: object
+      properties:
+        type:
+          type: string
+          description: Тип протокола
+          enum:
+            - ApiV2
+      required:
+        - type
+    ApiV3Protocol:
+      allOf:
+        - $ref: '#/components/schemas/Protocol'
+      description: Данные специфичные для api v3 протокола
+      type: object
+      properties:
+        type:
+          type: string
+          description: Тип протокола
+          enum:
+            - ApiV3
+        description:
+          type: string
+          description: поле, которое содержит описание транзакции
+      required:
+        - type
+    CustomProtocol:
+      allOf:
+        - $ref: '#/components/schemas/Protocol'
+      description: Данные о специфичных протоколах или о созданных в будущем
+      type: object
+      properties:
+        type:
+          type: string
+          description: Тип протокола
+          enum:
+            - Custom
+      required:
+        - type
+    YooMoneyPayment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentMethod'
+      description: Платеж в системе ЮMoney
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - YooMoney
+        walletNumber:
+          type: string
+          description: Номер кошелька в ЮMoney
+      required:
+        - type
+    YooMoneyPayment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentMethod'
+      description: Платеж в системе ЮMoney
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - YooMoney
+        walletNumber:
+          type: string
+          description: Номер кошелька в ЮMoney
+      required:
+        - type
+    BankCardPayment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentMethod'
+      type: object
+      description: Платеж банковской картой
+      properties:
+        type:
+          type: string
+          enum:
+            - BankCard
+        card:
+          $ref: '#/components/schemas/BankCardPanFragment'
+        rrn:
+          type: string
+          description: Retrieval Reference Number, идентификатор авторизации банковской карты присвоенный банком-эмитентом карты
+      required:
+        - type
+    MobileBalancePayment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentMethod'
+      type: object
+      description: Платеж с баланса мобильного телефона
+      properties:
+        type:
+          type: string
+          enum:
+            - MobileBalance
+        phoneNumber:
+          $ref: '#/components/schemas/Phone'
+      required:
+        - type
+    ExternalOperationPayment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentMethod'
+      type: object
+      description: Платеж с идентификатором внешней системы
+      properties:
+        type:
+          type: string
+          enum:
+            - AlfaBank
+            - WebMoney
+            - Cash
+            - Psb
+            - Sberbank
+            - Qiwi
+            - CashInCis
+            - Erip
+        externalOperationId:
+          type: string
+          description: Идентификатор внешней системы
+      required:
+        - type
+    AlternativePayment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentMethod'
+      type: object
+      description: Альтернативный платежный метод
+      properties:
+        type:
+          type: string
+          enum:
+            - SberbankBusiness
+            - MasterPass
+            - MPos
+            - PayLate
+            - KupiVKredit
+            - TinkoffInvoicing
+            - Installments
+            - WeChat
+            - Unknown
+      required:
+        - type
+    Refund:
+      description: Возврат
+      type: object
+      properties:
+        id:
+          type: string
+          description: идентификатор возврата на стороне YooMoney
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        cause:
+          type: string
+          description: причина возврата
+        type:
+          $ref: '#/components/schemas/RefundType'
+        externalId:
+          type: string
+          description: идентификатор возврата на стороне к/а или paymentsRefundId
+          example: 'REF2'
+        processedAt:
+          type: string
+          format: date-time
+          description: фактическое время возврата
+          example: '2018-11-19T17:05:07Z'
+        paymentReceipt:
+          $ref: '#/components/schemas/PaymentReceipt'
+      required:
+        - id
+        - amount
+        - type
+        - externalId
+        - processedAt
+    PaymentMode:
+      type: string
+      enum:
+        - FullPrepayment
+        - PartialPrepayment
+        - Advance
+        - FullPayment
+        - PartialPayment
+        - Credit
+        - CreditPayment
+      description: |
+        * FullPrepayment : Предоплата 100%
+        * PartialPrepayment : Частичная предварительная оплата до момента передачи предмета расчета
+        * Advance : Аванс
+        * FullPayment : Полный расчет
+        * PartialPayment : Частичный расчет и кредит
+        * Credit : Передача в кредит
+        * CreditPayment : Оплата кредита
+    InvoiceType:
+      type: string
+      enum:
+        - Email
+        - Sms
+        - Link
+      description: |
+        * Email : Счет, выставляемый по email
+        * Sms : Счет, выставляемый по sms
+        * Link:  Счет, выставляемый по ссылке
+    InvoiceStatus:
+      type: string
+      enum:
+        - Archived
+        - Canceled
+        - Created
+        - Paid
+        - Expired
+        - PartiallyRefunded
+        - FullyRefunded
+      description: |
+        * Archived : Архивный - используется в счетах, созданных до появления функционала отмены счета
+        * Created : Создан
+        * Paid:  Оплачен
+        * Canceled: Отменен
+        * Expired: Истек срок жизни
+        * PartiallyRefunded: Частично возвращен
+        * FullyRefunded: Полностью возвращен
+    InvoiceBrief:
+      description: Краткая информация о выставленном счете
+      type: object
+      properties:
+        id:
+          description: Идентификатор записи
+          type: integer
+          format: int64
+        type:
+          $ref: '#/components/schemas/InvoiceType'
+        orderNumber:
+          description: Номер счета (уникален в рамках одного магазина)
+          type: string
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        amountWithoutDiscount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        createDate:
+          description: Дата и время создания счета
+          type: string
+          format: date-time
+          example: '2019-02-18T17:05:07Z'
+      required:
+        - id
+        - type
+        - orderNumber
+        - status
+        - amount
+        - amountWithoutDiscount
+        - createDate
+    SubmitInvoiceRequest:
+      description: Запрос на выставление счета
+      type: object
+      properties:
+        shopId:
+          description: Идентификатор магазина
+          type: string
+          pattern: ^[0-9]*$
+          example: '12345'
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/MonetaryAmount'
+            - description: |
+                Ограничение на сумму выставляемого счета:
+                * Для InvoiceType = Email и Link - минимальная сумма счета 1 рубль, максимальная сумма счета 1 000 000 рублей
+                * Для InvoiceType = Sms минимальная сумма счета 100 рублей, максимальная сумма счета 1 000 000 рублей
+                * Для валютных магазинов минимальная сумма счета 1 у.е., максимальная сумма счета 1 000 000 у.е. для всех типов выставляемых счетов.
+        amountWithoutDiscount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceProduct'
+        language:
+          $ref: '#/components/schemas/Language'
+        expiry:
+          description: Время окончания жизни счета
+          type: string
+          format: date-time
+          example: '2019-02-19T17:05:07Z'
+        orderNumber:
+          description: Идентификатор счета
+          type: string
+          maxLength: 64
+          pattern: '[0-9a-zA-Zа-яА-ЯёЁ"/:;\-_\\]*'
+          example: '85632-21'
+        phoneNumber:
+          description: Номер телефона на который будет выслан счет по СМС
+          type: string
+          example: '+79919919911'
+        fullName:
+          description: ФИО плательщика
+          type: string
+          maxLength: 256
+          example: 'Иванов Иван Иванович'
+        description:
+          description: Описание счета
+          type: string
+          maxLength: 1024
+          example: 'Описание выставленного счета'
+        email:
+          description: Email плательщика
+          type: string
+          maxLength: 100
+          example: 'email@ya.ru'
+        receiptCustomer:
+          $ref: '#/components/schemas/ReceiptCustomer'
+        saveProductsToCatalog:
+          description: Сохранять ли товары в Справочник товаров
+          type: boolean
+        savePayerToCatalog:
+          description: Сохранять ли информацию о плательщике в Справочник плательщиков. При выставлении счета по ссылке информация о плательщике не сохраняется.
+          type: boolean
+      required:
+        - shopId
+        - amount
+        - amountWithoutDiscount
+        - products
+        - language
+    Invoice:
+      description: Выставленный счет
+      type: object
+      properties:
+        id:
+          description: Идентификатор записи
+          type: integer
+          format: int64
+        type:
+          $ref: '#/components/schemas/InvoiceType'
+        link:
+          description: Ссылка для оплаты выставленного счета (диплинк на страницу с выставленным счетом)
+          type: string
+        orderNumber:
+          description: Номер счета (уникален в рамках одного магазина)
+          type: string
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceProduct'
+        email:
+          description: Email плательщика
+          type: string
+        phoneNumber:
+          description: Номер телефона на который будет выслан счет по СМС
+          type: string
+          x-sensitive: true
+        fullName:
+          description: ФИО плательщика
+          type: string
+          x-sensitive: true
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        amountWithoutDiscount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        description:
+          description: Описание счета, символы разметки не допускаются
+          maxLength: 1024
+          type: string
+        createDate:
+          description: Дата и время создания счета
+          type: string
+          format: date-time
+          example: '2019-02-18T17:05:07Z'
+        login:
+          description: Логин пользователя, выставившего счёт
+          type: string
+        expiry:
+          description: Время окончания жизни счета
+          type: string
+          format: date-time
+          example: '2019-02-19T17:05:07Z'
+        language:
+          $ref: '#/components/schemas/Language'
+        cancelAvailability:
+          $ref: '#/components/schemas/CancelInvoiceAvailability'
+      required:
+        - id
+        - type
+        - orderNumber
+        - status
+        - amount
+        - amountWithoutDiscount
+        - createDate
+        - login
+        - products
+        - cancelAvailability
+    InvoiceOptions:
+      description: Информация для выставления счета
+      type: object
+      properties:
+        currency:
+          title: Код валюты, ISO-4217 3-alpha currency symbol
+          description: |
+            Код валюты, ISO-4217 3-alpha currency symbol, например:
+            RUB; USD; EUR; BYN; KZT. XXX в случае неизвестной валюты.
+          type: string
+          example: 'RUB'
+      required:
+        - currency
+    InvoiceSettings:
+      description: Настройки для всех счетов в рамках одного магазина
+      type: object
+      properties:
+        language:
+          $ref: '#/components/schemas/Language'
+        defaultPaymentSubject:
+          $ref: '#/components/schemas/PaymentSubject'
+        defaultPaymentMode:
+          $ref: '#/components/schemas/PaymentMode'
+        hidePaymentSubject:
+          description: Скрывать ли поля "предмет расчтета"
+          type: boolean
+        hidePaymentMode:
+          description: Скрывать ли поля "способ расчтета"
+          type: boolean
+        discountEnabled:
+          description: Предоставляется ли скидка
+          type: boolean
+        customOrderNumberEnabled:
+          description: Предоставляется ли возможность указывать собственный номер счета при выставлении счета
+          type: boolean
+        defaultVatCode:
+          $ref: '#/components/schemas/VatCode'
+      required:
+        - language
+        - hidePaymentSubject
+        - hidePaymentMode
+        - discountEnabled
+        - customOrderNumberEnabled
+    SetInvoiceSettingsRequest:
+      description: Обновляемые настройки для всех счетов в рамках одного магазина. Если значение полей defaultPaymentSubject, defaultPaymentMode и defaultVatCode не передаются или равны null, тогда они обновятся в базе на null значения.
+      type: object
+      properties:
+        shopId:
+          description: Идентификатор магазина
+          type: string
+          example: '12345'
+          pattern: ^[0-9]*$
+        language:
+          $ref: '#/components/schemas/Language'
+        defaultPaymentSubject:
+          $ref: '#/components/schemas/PaymentSubject'
+        defaultPaymentMode:
+          $ref: '#/components/schemas/PaymentMode'
+        hidePaymentSubject:
+          description: Скрывать ли поля "предмет расчета"
+          type: boolean
+        hidePaymentMode:
+          description: Скрывать ли поля "способ расчета"
+          type: boolean
+        discountEnabled:
+          description: Предоставляется ли скидка
+          type: boolean
+        customOrderNumberEnabled:
+          description: Предоставляется ли возможность указывать собственный номер счета при выставлении счета
+          type: boolean
+        defaultVatCode:
+          $ref: '#/components/schemas/VatCode'
+      required:
+        - shopId
+        - language
+        - hidePaymentSubject
+        - hidePaymentMode
+        - discountEnabled
+        - customOrderNumberEnabled
+    InvoiceProduct:
+      description: Продукт в составе счета
+      type: object
+      properties:
+        name:
+          description: Название продукта
+          type: string
+          maxLength: 200
+          example: 'Название товара'
+        count:
+          description: Количество единиц продукта, целое или дробное, до 3 цифр после точки
+          type: number
+          example: 1
+        price:
+          $ref: '#/components/schemas/MonetaryAmount'
+        priceWithoutDiscount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        discountValue:
+          description: Сумма скидки за единицу продукта (в валюте магазина или процентах), тип значения определяется с помощью поля discountType. Если скидки нет, то значение discountValue должно быть null.
+          type: number
+          example: 10
+        discountType:
+          allOf:
+            - $ref: '#/components/schemas/DiscountType'
+            - description: Если скидки нет, то значение discountType должно быть null.
+        vatCode:
+          description: Идентификатор ставки НДС (от 1 до 6), при выставлении счета следует использовать коды 1, 3 или 4 «1» – без НДС; «2» – НДС по ставке 0%; «3» – НДС чека по ставке 10%; «4» – НДС чека по ставке 20%; «5» – НДС чека по расчетной ставке 10/110; «6» – НДС чека по расчетной ставке 20/120;
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 6
+          example: 1
+        paymentSubject:
+          $ref: '#/components/schemas/PaymentSubject'
+        paymentMode:
+          $ref: '#/components/schemas/PaymentMode'
+      required:
+        - name
+        - count
+        - price
+        - priceWithoutDiscount
+    Language:
+      type: string
+      enum:
+        - Ru
+        - En
+      description: |
+        * Ru : Русский язык (формат ISO 639-1)
+        * En : Английский язык  (формат ISO 639-1)
+    CancelInvoiceAvailability:
+      description: Возможность отмены счета
+      type: object
+      properties:
+        enabled:
+          description: Признак доступности операции отмены для текущего счёта
+          type: boolean
+      required:
+        - enabled
+    ReceiptCustomer:
+      type: object
+      description: Информация о покупателе в рамках дополнения к ФЗ-54 от 01.07.2019.
+      properties:
+        fullName:
+          description: Полное имя клиента. Если у физлица отсутствует ИНН, в этом же параметре передаются паспортные данные
+          type: string
+          example: 'Иванов Иван Иванович'
+          x-sensitive: true
+        itn:
+          description: ИНН клиента
+          type: string
+          minLength: 10
+          maxLength: 12
+          pattern: ^(\d{10}|\d{12})$
+          example: '6321341814'
+          x-sensitive: true
+      required:
+        - fullName
+    DiscountType:
+      type: string
+      enum:
+        - Percent
+        - Absolute
+      description: |
+        * Percent : Скидка предоставляется в процентах
+        * Absolute : Скидка предоставляется в абсолютной величине
+    PaymentSubject:
+      type: string
+      enum:
+        - Commodity
+        - Excise
+        - Job
+        - Service
+        - GamblingBet
+        - GamblingPrize
+        - Lottery
+        - LotteryPrize
+        - IntellectualActivity
+        - Payment
+        - AgentCommission
+        - PropertyRight
+        - NonOperatingGain
+        - InsurancePremium
+        - SalesTax
+        - ResortFee
+        - Composite
+        - Another
+      description: |
+        * Commodity : Товар
+        * Excise : Подакцизный товар
+        * Job : Работа
+        * Service : Услуга
+        * GamblingBet : Ставка азартной игры
+        * GamblingPrize : Выигрыш азартной игры
+        * Lottery : Лотерейный билет
+        * LotteryPrize : Выигрыш лотереи
+        * IntellectualActivity : Предоставление результатов интеллектуальной деятельности
+        * Payment : Платеж. Об авансе, задатке, предоплате, кредите, взносе в счет оплаты, пени, штрафе, вознаграждении, бонусе и ином аналогичном предмете расчета.
+        * AgentCommission : Агентское вознаграждение
+        * PropertyRight : Передача имущественных прав
+        * NonOperatingGain : Внереализационный доход
+        * InsurancePremium : Сумма расходов, уменьшающая сумму налога (авансовых платежей) в соответствии с пунктом 3.1 статьи 346.21 Налогового кодекса Российской Федерации.
+        * SalesTax : Сумма уплаченного торгового сбора.
+        * ResortFee : Курортный сбор.
+        * Composite : Составной предмет расчета
+        * Another : Иной предмет расчета
+    RefundRequestStatus:
+      type: string
+      enum:
+        - Pending
+        - Successful
+        - Failed
+      description: |
+        Статус заявка на проведение возврата
+         * Pending: Заявка обрабатывается
+         * Successful: Заявка обработана успешно
+         * Failed: Заявка обработана с ошибкой, описание ошибки в поле error
+    RefundError:
+      type: string
+      enum:
+        - IllegalShopId
+        - IllegalPaymentId
+        - IllegalAmount
+        - IllegalCurrency
+        - IllegalCause
+        - ExternalIdDuplication
+        - AmountRemainderTooLow
+        - OperationForbidden
+        - InappropriateStatus
+        - RecipientAccountClosed
+        - AuthorizationRejected
+        - InsufficientFunds
+        - OperationNotSupported
+        - PartialRefundNotAllowed
+        - TechnicalError
+        - OrderRefused
+        - RefundExpired
+        - ForbiddenRefundWhenSettlementCompleted
+      description: |
+        Ошибки при проведении возврата
+        * IllegalShopId: Проверьте shopId: вы пытаетесь провести возврат платежа в другой магазин
+        * IllegalPaymentId: Проверьте номер транзакции: такого платежа в вашем магазине нет
+        * IllegalAmount: Вы пытаетесь вернуть больше, чем заплатил покупатель. Измените сумму и попробуйте еще раз
+        * IllegalCurrency: Пользователь заплатил в одной валюте, а вы делаете возврат в другой. Попробуйте еще раз
+        * IllegalCause: Выберите причину возврата и попробуйте еще раз. Если не помогает, напишите службе поддержки
+        * ExternalIdDuplication: Вы уже пытались провести возврат с тем же идентификатором. Попробуйте заново
+        * AmountRemainderTooLow: Частичный возврат должен быть меньше платежа хотя бы на 1 рубль. Сделайте полный возврат
+        * OperationForbidden: Магазину нельзя проводить возвраты платежей
+        * InappropriateStatus: Этот платеж нельзя вернуть (он не завершен, отменен или уже возвращен)
+        * RecipientAccountClosed: Счет плательщика закрыт, вернуть деньги не получится
+        * InsufficientFunds: Не получилось: сумма платежей за сегодня меньше этого возврата.
+        * OperationNotSupported: Платеж этим способом нельзя вернуть через ЮKassa. Вы можете вернуть деньги клиенту напрямую
+        * PartialRefundNotAllowed: При этом способе оплаты можно сделать только полный возврат
+        * TechnicalError: Возврат не прошел из-за технической ошибки. Попробуйте позже.
+        * OrderRefused: Возврат не прошел. Проверьте данные и условия
+        * RefundExpired: Этот платёж нельзя вернуть, срок возврата закончился
+        * ForbiddenRefundWhenSettlementCompleted: Этот платёж можно вернуть только по платежному поручению
+    RefundAvailability:
+      description: Доступность возврата, доступные к возврату сумма, позиции чека
+      type: object
+      properties:
+        partial:
+          description: Доступен частичный возврат средств
+          type: boolean
+        full:
+          description: Доступен полный возврат средств
+          type: boolean
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/MonetaryAmount'
+            - description: Сумма возврата
+        items:
+          type: array
+          description: Состав чека для возврата
+          items:
+            $ref: '#/components/schemas/RefundableItem'
+      required:
+        - partial
+        - full
+        - amount
+        - items
+    PaymentErrorCode:
+      type: string
+      enum:
+        - PaymentExpired
+        - IssuerUnavailable
+        - GeneralDecline
+        - CallCardIssuer
+        - CardExpired
+        - CardNotSupported
+        - CardRestricted
+        - FraudSuspected
+        - CardLimitExceeded
+        - CountryForbidden
+        - 3dSecureFailed
+        - InsufficientFunds
+        - InvalidCardNumber
+        - InvalidExpiryDate
+        - InvalidCsc
+        - CurrencyForbidden
+      x-enum-varnames:
+        - PAYMENT_EXPIRED
+        - ISSUER_UNAVAILABLE
+        - GENERAL_DECLINE
+        - CALL_CARD_ISSUER
+        - CARD_EXPIRED
+        - CARD_NOT_SUPPORTED
+        - CARD_RESTRICTED
+        - FRAUD_SUSPECTED
+        - CARD_LIMIT_EXCEEDED
+        - COUNTRY_FORBIDDEN
+        - THREE_D_SECURE_FAILED
+        - INSUFFICIENT_FUNDS
+        - INVALID_CARD_NUMBER
+        - INVALID_EXPIRY_DATE
+        - INVALID_CSC
+        - CURRENCY_FORBIDDEN
+      description: |
+        Ошибки карточных операций. В качестве описания приведен текст ошибки.
+         * PaymentExpired : Не удалось подтвердить оплату в срок. Покупатель может заплатить ещё раз.
+         * IssuerUnavailable : Банк не отвечает. Если ошибка повторяется, напишите поддержке Кассы.
+         * GeneralDecline : Этот способ оплаты отклонен. Можно заплатить другим способом.
+         * CallCardIssuer : Платеж с этой карты отклонен. Покупатель может узнать подробности в банке
+         * CardExpired : Истёк срок действия карты. Можно заплатить другой картой или другим способом.
+         * CardNotSupported : Такие карты не принимаются. Покупатель может заплатить другим способом.
+         * CardRestricted : Карта временно не работает. Покупатель может заплатить другим способом.
+         * FraudSuspected : Платеж не прошел из-за подозрения в мошенничестве.
+         * CardLimitExceeded : Карта достигла лимита (по карте или для вашего магазина). Покупатель может заплатить на следующий день
+         * CountryForbidden : Нельзя заплатить картой, выпущенной в этой стране. Уточните настройки у поддержки Кассы.
+         * 3dSecureFailed : Банк не подтвердил операцию из-за ошибки 3-D Secure. Покупатель может повторить попытку или уточнить в своем банке.
+         * InsufficientFunds : Не хватает денег для оплаты. Покупатель может заплатить другим способом.
+         * InvalidCardNumber : В номере карты ошибка. Покупатель может заплатить ещё раз.
+         * InvalidExpiryDate : В сроке действия карты ошибка. Покупатель может заплатить ещё раз.
+         * InvalidCsc : В коде CVC ошибка. Покупатель может заплатить ещё раз.
+         * CurrencyForbidden : Некорректная валюта. Подробности у поддержки Кассы.
+    Protocol:
+      type: object
+      description: Протокол подключения
+      properties:
+        type:
+          type: string
+          enum:
+            - Email
+            - Http
+            - ApiV2
+            - ApiV3
+            - Custom
+      discriminator:
+        propertyName: type
+        mapping:
+          Email: '#/components/schemas/EmailProtocol'
+          Http: '#/components/schemas/HttpProtocol'
+          ApiV2: '#/components/schemas/ApiV2Protocol'
+          ApiV3: '#/components/schemas/ApiV3Protocol'
+          Custom: '#/components/schemas/CustomProtocol'
+    PaymentMethod:
+      type: object
+      description: Метод платежа
+      properties:
+        type:
+          type: string
+          enum:
+            - YooMoney
+            - BankCard
+            - MobileBalance
+            - AlfaBank
+            - WebMoney
+            - Cash
+            - Psb
+            - Sberbank
+            - Qiwi
+            - CashInCis
+            - Erip
+            - SberbankBusiness
+            - MasterPass
+            - MPos
+            - PayLate
+            - KupiVKredit
+            - TinkoffInvoicing
+            - Installments
+            - WeChat
+            - Unknown
+      discriminator:
+        propertyName: type
+        mapping:
+          YooMoney: '#/components/schemas/YooMoneyPayment'
+          BankCard: '#/components/schemas/BankCardPayment'
+          MobileBalance: '#/components/schemas/MobileBalancePayment'
+          AlfaBank: '#/components/schemas/ExternalOperationPayment'
+          WebMoney: '#/components/schemas/ExternalOperationPayment'
+          Cash: '#/components/schemas/ExternalOperationPayment'
+          Psb: '#/components/schemas/ExternalOperationPayment'
+          Sberbank: '#/components/schemas/ExternalOperationPayment'
+          Qiwi: '#/components/schemas/ExternalOperationPayment'
+          CashInCis: '#/components/schemas/ExternalOperationPayment'
+          Erip: '#/components/schemas/ExternalOperationPayment'
+          SberbankBusiness: '#/components/schemas/AlternativePayment'
+          MasterPass: '#/components/schemas/AlternativePayment'
+          MPos: '#/components/schemas/AlternativePayment'
+          PayLate: '#/components/schemas/AlternativePayment'
+          KupiVKredit: '#/components/schemas/AlternativePayment'
+          TinkoffInvoicing: '#/components/schemas/AlternativePayment'
+          Installments: '#/components/schemas/AlternativePayment'
+          WeChat: '#/components/schemas/AlternativePayment'
+          Unknown: '#/components/schemas/AlternativePayment'
+    BankCardPanFragment:
+      description: |
+        Неполный номер банковской карты.
+
+        Объект содержит в себе частичную информацию о номере банковской карты
+      properties:
+        first:
+          description: Первые шесть цифр карты
+          example: 410056
+          pattern: '[0-9]{6}'
+          type: string
+        last:
+          description: Последние четыре цифры карты
+          example: 5604
+          pattern: '[0-9]{4}'
+          type: string
+        length:
+          description: Общее количество цифр в номере карты
+          example: 16
+          format: int32
+          maximum: 19
+          minimum: 16
+          type: integer
+      required:
+        - first
+        - last
+        - length
+      type: object
+    Phone:
+      description: Номер телефона в формате ITU-T E.164
+      type: string
+      pattern: '[0-9]{4,15}'
+      example: 79000000000
+      x-sensitive: true
+    PaymentReceiptItem:
+      description: Позиция фискального чека
+      type: object
+      properties:
+        text:
+          type: string
+          description: Название позиции Deprecated! Скоро будет удалено, используйте поле description
+          deprecated: true
+          example: 'шампунь'
+        description:
+          type: string
+          description: Название позиции
+          example: 'шампунь'
+        quantity:
+          type: string
+          description: Количество товара
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/MonetaryAmount'
+            - description: Цена товара с учетом всех скидок и наценок
+        vat:
+          $ref: '#/components/schemas/VatCodeTitle'
+        vatCode:
+          $ref: '#/components/schemas/VatCode'
+      required:
+        - text
+        - description
+        - quantity
+        - amount
+    InstallationIdentifier:
+      type: string
+      description: Уникальный идентификатор (uuid) установки приложения на устройстве Получать вызовом к /installation-identifier
+      minLength: 1
+      example: 'd504eb582a082fbd05680cd482d27beb'
+    PushNotificationSettings:
+      description: |
+        Доступные настройки для пользователя
+        * `sendPushNotificationOnInvoicePayment` - указывает, что пользователю нужно посылать пуш уведомления при оплате счета
+        * `sendPushNotificationOnSuccessfulPayment` - указывает, что пользователю нужно посылать пуш уведомления при успешном платеже в
+        магазин пользователя
+      type: object
+      properties:
+        sendPushNotificationOnInvoicePayment:
+          type: boolean
+        sendPushNotificationOnSuccessfulPayment:
+          type: boolean
+      required:
+        - sendPushNotificationOnInvoicePayment
+        - sendPushNotificationOnSuccessfulPayment
+    PushNotificationSubscribeRequest:
+      description: Информация для создания подписки на push-уведомления
+      type: object
+      properties:
+        uuid:
+          $ref: '#/components/schemas/InstallationIdentifier'
+        applicationIdentifier:
+          description: Идентификатор приложения, для которого создается подписка
+          type: string
+          minLength: 1
+          example: 'ru.yoomoney.checkout.release'
+        notificationToken:
+          description: Токен для отправки push-уведомлений
+          type: string
+          example: '3aeb3b8461b82cd6dd65b15ab2abfa70a7883c4ea125b89b01166686d1a7b357'
+          minLength: 1
+        notificationClientType:
+          $ref: '#/components/schemas/NotificationClientType'
+        allowableNotificationTypes:
+          description: Список поддерживаемых типов push-уведомлений для клиента
+          type: array
+          items:
+            $ref: '#/components/schemas/PushNotificationTypes'
+      required:
+        - uuid
+        - applicationIdentifier
+        - notificationToken
+        - notificationClientType
+        - allowableNotificationTypes
+    PushNotificationUnsubscribeRequest:
+      description: Отписка устройста пользователя от push-уведомлений
+      type: object
+      properties:
+        uuid:
+          $ref: '#/components/schemas/InstallationIdentifier'
+      required:
+        - uuid
+    PushNotificationsUpdateRequest:
+      description: Запрос на обновление настроек push-уведомлений для конкретного устройства пользователя.  Если отправляется null значение какой-либо настройки, её значение не изменяется.
+      type: object
+      properties:
+        uuid:
+          $ref: '#/components/schemas/InstallationIdentifier'
+        sendPushNotificationOnInvoicePayment:
+          description: Необходимо ли отправлять push-уведомление при оплате выставленного счета
+          type: boolean
+          example: true
+        sendPushNotificationOnSuccessfulPayment:
+          description: Необходимо ли отправлять push-уведомление при успешном платеже в магазин
+          type: boolean
+          example: true
+      required:
+        - uuid
+    NotificationClientType:
+      type: string
+      enum:
+        - FCM
+        - APNS
+      description: |
+        Тип клиента:
+        * FCM : Firebase Cloud Messaging
+        * APNS : Apple Push Notification Service
+    PushNotificationTypes:
+      type: string
+      enum:
+        - OnInvoicePayment
+        - OnSuccessfulPayment
+      description: |
+        * OnInvoicePayment : отправка push-уведомлений при оплате счета
+        * OnSuccessfulPayment : отправка push-уведомлений при успешном платеже в магазин
+  responses:
+    ArgumentsError:
+      description: Запрос с указанными параметрами не может быть выполнен.
+      content:
+        application/json:
+          schema:
+            title: ArgumentsError
+            type: object
+            properties:
+              error:
+                title: Error
+                oneOf:
+                  - $ref: '#/components/schemas/ArgumentsSyntaxError'
+                  - $ref: '#/components/schemas/ArgumentsParametersError'
+                  - $ref: '#/components/schemas/ArgumentsHeadersError'
+                discriminator:
+                  propertyName: type
+            required:
+              - error
+    AuthenticationError:
+      description: |
+        Запрос не может быть выполнен — ошибка аутентификационных данных клиента.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                oneOf:
+                  - $ref: '#/components/schemas/AuthenticationTokenError'
+                discriminator:
+                  propertyName: type
+            required:
+              - error
+    TechnicalError:
+      description: |
+        Техническая ошибка. Результат выполнения запроса неизвестен.
+        Клиенту следует повторить запрос с теми же аргументами спустя указанное время ожидания.
+
+        Коды ошибок:
+        * TechnicalError - Техническая ошибка сервиса.
+        * ServiceUnavailable - Сервис временно недоступен.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  type:
+                    description: Код ошибки
+                    type: string
+                    enum:
+                      - TechnicalError
+                      - ServiceUnavailable
+                    example: 'TechnicalError'
+                  retryAfter:
+                    description: Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос.
+                    type: integer
+                    format: int64
+                    example: 5000
+                    minimum: 10
+                  description:
+                    description: Дополнительное текстовое пояснение причины ошибки. Может присутствовать в некоторых случаях.
+                    type: string
+                    example: 'Съешь еще этих мягких французских булок'
+                required:
+                  - type
+            required:
+              - error
+  parameters:
+    PassportAuthorization:
+      description: |
+        OAuth2 token выданный Яндекс.Паспорт в формате "Bearer [token]"
+      in: header
+      name: Passport-Authorization
+      required: false
+      schema:
+        type: string
+        externalDocs:
+          url: https://tech.site.ru/oauth/doc/dg/concepts/about-docpage/
+          description: OAuth в Яндексе
+    Authorization:
+      description: |
+        OAuth2 token выданный собственным центром авторизации в формате "Bearer [token]"
+      in: header
+      name: Authorization
+      required: false
+      schema:
+        type: string
+    IdempotenceKey:
+      description: |
+        Ключ идемпотентности
+      in: header
+      name: Idempotence-Key
+      required: true
+      schema:
+        type: string
+        maxLength: 64
+        pattern: '[0-9a-zA-Z+-_.]{1,64}'
+        example: '2e1da982-1bb1-41f0-b9cf-758cc8bcf069'
+    RefundId:
+      name: refundId
+      description: Id возврата
+      in: path
+      required: true
+      schema:
+        type: string
+    YoomoneyUserAgent:
+      in: header
+      name: User-Agent
+      required: true
+      description: Мобильные приложения и публичные SDK Юmoney, умеют формировать UserAgent в определенном формате. Формат <application name>.<target platform>\<application version> <running platform>\<OS version> <device class>
+      schema:
+        type: string
+        pattern: (.+)\/([0-9.]+)\s(.+)\/([0-9.]+)\s(.+)
+        example: 'YooMoney.Android/4.17.1 Android/8.0 Phone'
+      examples:
+        example1:
+          value: YooMoney.Android/4.17.1 Android/8.0 Phone
+          summary: YooMoney version 4.17.1 for Android used with Android Phone version 8.0
+        example2:
+          value: YooKassa.Client.iOS/0.1 iOS/13.5 Phone
+          summary: YooKassa.Client version 0.1 for iOS used with iOS Phone version 13.5
+        example3:
+          value: YooKassa.SDK.Client.iOS/5.0.0 iOS/14.1 Phone
+          summary: YooKassa.SDK version 5.0.0 for iOS used with iOS version 14.1
+    PaymentId:
+      name: paymentId
+      description: |
+        Id платежа
+      in: path
+      required: true
+      schema:
+        type: string

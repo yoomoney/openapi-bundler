@@ -1,0 +1,234 @@
+openapi: "3.0.2"
+info:
+  version: "1.0.0"
+  title: PetStore API Project Template
+  description: |
+    # Шаблон спецификации - пример описания
+
+    ## Глоссарий основных сущностей сервиса:
+
+    * Transfer - перевод в системе YooMoney. Отражает атрибуты и состояние перевода. Идентификатор перевода (TransferId) является первичной ссылкой на все последующие процессы. Для совершения перевода следует указать Откуда, Кому, Сколько и Как.
+    * Source - платежные данные отправителя перевода, источник средств ("Откуда"). Наследники этого типа представляют реализации конкретных источников перевода (кошелек, банковская карта, etc).
+    * Recipient - получатель перевода, данные о получателе перевода ("Кому"). Наследники этого типа представляют реализации конкретных получателей перевода (номер кошелька, номер телефона, номер банковской карты, etc).
+    * MonetaryAmount - определение суммы в указанной валюте ("Сколько"). Мы не говорим "заплати 100", мы используем термин "заплати 100 рублей".
+    * Confirmation - пользовательский процесс подтверждения перевода ("Как"). Наследники этого типа представляют реализации конкретных процессов подтверждения перевода (редирект на страницы 3-D Secure, redirectUrl).
+
+servers:
+  - url: https://hostname/template-api/v1
+
+security:
+  - OAuth2Wallet:
+      - account-info
+
+paths:
+
+  /transfers:
+    $ref: 'commands/transfers.yaml'
+
+  /transfer-options:
+    $ref: 'commands/transfer-options.yaml'
+
+  /tokens:
+    $ref: 'commands/tokens.yaml'
+
+
+components:
+
+  securitySchemes:
+
+    OAuth2Wallet:
+      description: OAuth2 авторизация кошелька YooMoney
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://hostname/oauth/authorize
+          tokenUrl: https://hostname/oauth/token
+          scopes:
+            account-info: Информация о состоянии кошелька
+
+  schemas:
+
+    ConfirmationType:
+      description: |
+        Тип пользовательского процесса подтверждения перевода:
+        * Redirect - необходимо направить пользователя на веб-страницу.
+      type: string
+      enum:
+        - Redirect
+      example: Redirect
+
+    TransferStatus:
+      description: |
+        Статус перевода:
+
+        * Pending - Перевод ожидает подтверждения или иных действий отправителя.
+        * Sent - Перевод успешно отправлен получателю и ожидает приёма.
+        * Delivered - Перевод успешно завершен, доставлен получателю.
+        * Canceled - В проведении перевода отказано, перевод отвергнут получателем или срок его приема истёк.
+
+        Возможные последовательности переходов состояний:
+
+        * Pending -> (Sent, Delivered, Canceled)
+        * Sent -> (Delivered, Canceled)
+        * Delivered и Canceled это финальные состояния
+      type: string
+      enum:
+        - Pending
+        - Sent
+        - Delivered
+        - Canceled
+      example: Delivered
+
+    TransferErrorType:
+      description: >
+        Причина отказа в проведении перевода или его отмены.
+
+        * InsufficientFunds - Недостаточно средств для совершения перевода.
+
+        * LimitExceeded - Превышен один из лимитов на операции:
+
+          * на сумму операции для выданного токена авторизации;
+          * сумму операций за период времени для выданного токена авторизации;
+          * ограничений платежной системы для различных видов операций.
+
+        * IdentificationRequired - Для проведения перевода требуется идентификация отправителя.
+
+        * SimplifiedIdentificationRequired - Для проведения перевода требуется упрощенная идентификация отправителя.
+
+        * TransferExpired - Истек срок, отведенный для приема перевода получателем. Перевод возвращен отправителю.
+
+        * TransferDeclined - В проведении перевода отказано. Generic ошибка для всех остальных отказов в проведении перевода.
+
+      type: string
+      enum:
+        - InsufficientFunds
+        - LimitExceeded
+        - IdentificationRequired
+        - SimplifiedIdentificationRequired
+        - TransferExpired
+        - TransferDeclined
+      example: 'InsufficientFunds'
+
+    TransferError:
+      description: Отказ в проведении перевода или причина его отмены.
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TransferErrorType'
+      discriminator:
+        propertyName: type
+      required:
+        - type
+
+    TransferId:
+      description: Идентификатор перевода
+      type: string
+      minLength: 36
+      maxLength: 36
+      example: '1da5c87d-0984-50e8-a7f3-8de646dd9ec9'
+
+    Transfer:
+      description: Перевод в системе YooMoney.
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/TransferId'
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        error:
+          allOf:
+            - $ref: '#/components/schemas/TransferError'
+            - description: Причина отказа в проведении перевода или его отмены. Присутствует при status=Canceled.
+      required:
+        - id
+        - status
+
+    TransferToken:
+      description: |
+        Одноразовый токен для проведения перевода, имеет ограниченный срок действия.
+      type: string
+      maxLength: 200
+      example: '+u7PDjMTkf08NtD66P6+eYWa2yjU3gsSIhOOO+OWsOg='
+
+    Fee:
+      description: Комиссия с отправителя сверх суммы перевода.
+      type: object
+      properties:
+        service:
+          $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
+        counterparty:
+          $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
+      required:
+        - service
+        - counteragent
+
+    TransferOption:
+      description: Определение способа совершения перевода.
+      type: object
+      properties:
+        charge:
+          allOf:
+            - $ref: 'http://localhost:8888/domain.yaml#/components/schemas/MonetaryAmount'
+            - description: MonetaryAmount, сумма к оплате отправителем.
+        fee:
+          allOf:
+            - $ref: '#/components/schemas/Fee'
+            - description: Комиссия с отправителя сверх суммы перевода. Поле присутствует в случае наличия комиссий сверх суммы перевода.
+      required:
+        - charge
+
+    PermissionsError:
+      description: |
+        Запрос не может быть выполнен — Клиент не обладает достаточными правами, или состояние учетной записи клиента не позволяет совершить операцию.
+
+        Коды ошибок:
+        * InvalidScope - Указанная авторизация клиента не обладает достаточными правами для совершения этой операции.
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - InvalidScope
+          example: InvalidScope
+      required:
+        - type
+
+  responses:
+
+    TechnicalError:
+      description: |
+        Техническая ошибка. Результат выполнения запроса неизвестен.
+        Клиенту следует повторить запрос с теми же аргументами спустя указанное время ожидания.
+
+        Коды ошибок:
+        * TechnicalError - Техническая ошибка сервиса.
+        * ServiceUnavailable - Сервис временно недоступен.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  type:
+                    description: Код ошибки
+                    type: string
+                    enum:
+                      - TechnicalError
+                      - ServiceUnavailable
+                    example: TechnicalError
+                  retryAfter:
+                    description: Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос.
+                    type: integer
+                    format: int64
+                    example: 5000
+                    minimum: 10
+                  description:
+                    description: Дополнительное текстовое пояснение причины ошибки. Может присутствовать в некоторых случаях.
+                    type: string
+                    example: 'Съешь еще этих мягких французских булок'
+                required:
+                  - type
+            required:
+              - error
