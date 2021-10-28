@@ -1,0 +1,343 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Общие схемы merchant-public-api
+
+components:
+
+  securitySchemes:
+
+    yooid:
+      description: Авторизация yooid
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: 'https://yoomoney.ru/oauth/authorize'
+          tokenUrl: 'https://yoomoney.ru/oauth/token'
+          scopes:
+            merchant_dashboard:profile: Вход и работа в личном кабинете Кассы
+            merchant_dashboard:payment_info: Информация о последних проведенных платежах в ЛК Кассы
+
+  schemas:
+
+    LifecycleId:
+      description: Номер заявки на подключение
+      type: string
+      example: 12345
+
+    ShopId:
+      description: Идентификатор магазина
+      type: string
+      example: 1231
+
+    GateId:
+      description: Идентификатор шлюза
+      type: string
+      example: 13425
+
+    PermissionsCommonError:
+      description: |
+        Запрос не может быть выполнен — Клиент не обладает достаточными правами, или состояние учетной записи клиента не позволяет совершить операцию.
+
+        Коды ошибок:
+        * InvalidScope - Указанная авторизация клиента не обладает достаточными правами для совершения этой операции.
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - InvalidScope
+          example: InvalidScope
+      required:
+        - type
+
+    PermissionRulesViolationUserError:
+      description: |
+        Операция не доступна для пользователя
+
+        Коды ошибок:
+
+        * RuleViolation - Отказ по правилам бизнес-логики:
+           * UserNotFound - Информация о пользователе отсутсвует в части системы.
+           * UnavailableForUser - У пользователя нет прав на такую операцию (например из-за роли).
+      type: object
+      properties:
+        type:
+          description: Причина отказа в операции - правило бизнес-логики.
+          type: string
+          enum:
+            - RuleViolation
+          example: RuleViolation
+        rule:
+          description: Код правила бизнес-логики.
+          type: string
+          enum:
+            - UserNotFound
+            - UnavailableForUser
+          example: UnavailableForUser
+        resolveUrl:
+          description: >
+            URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+          type: string
+      required:
+        - type
+        - rule
+
+    PermissionRulesViolationShopError:
+      description: |
+        Операция не доступна для пользователя
+
+        Коды ошибок:
+
+        * RuleViolation - Отказ по правилам бизнес-логики:
+          * ShopNotFound - Магазина нет в системе.
+          * UnavailableForShop - Операция недоступна для данного магазина (например отключен).
+      type: object
+      properties:
+        type:
+          description: Причина отказа в операции - правило бизнес-логики.
+          type: string
+          enum:
+            - RuleViolation
+          example: RuleViolation
+        rule:
+          description: Код правила бизнес-логики.
+          type: string
+          enum:
+            - ShopNotFound
+            - UnavailableForShop
+          example: UnavailableForShop
+        resolveUrl:
+          description: >
+            URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+          type: string
+      required:
+        - type
+        - rule
+
+    PermissionRulesViolationCounterpartyError:
+      description: |
+        Операция не доступна для пользователя
+
+        Коды ошибок:
+
+        * RuleViolation - Отказ по правилам бизнес-логики:
+           * CounterpartyNotFound - Организации нет в системе.
+           * UnavailableForCounterparty - Операция недоступна для данной организации.
+      type: object
+      properties:
+        type:
+          description: Причина отказа в операции - правило бизнес-логики.
+          type: string
+          enum:
+            - RuleViolation
+          example: RuleViolation
+        rule:
+          description: Код правила бизнес-логики.
+          type: string
+          enum:
+            - CounterpartyNotFound
+            - UnavailableForCounterparty
+          example: UnavailableForCounterparty
+        resolveUrl:
+          description: >
+            URL страницы, на которую следует отправить пользователя для разрешения причин отказа в проведении перевода
+          type: string
+      required:
+        - type
+        - rule
+
+    PaymentSubject:
+      type: string
+      enum:
+        - Commodity
+        - Excise
+        - Job
+        - Service
+        - GamblingBet
+        - GamblingPrize
+        - Lottery
+        - LotteryPrize
+        - IntellectualActivity
+        - Payment
+        - AgentCommission
+        - PropertyRight
+        - NonOperatingGain
+        - InsurancePremium
+        - SalesTax
+        - ResortFee
+        - Composite
+        - Another
+      description: |
+        * Commodity : Товар
+        * Excise : Подакцизный товар
+        * Job : Работа
+        * Service : Услуга
+        * GamblingBet : Ставка азартной игры
+        * GamblingPrize : Выигрыш азартной игры
+        * Lottery : Лотерейный билет
+        * LotteryPrize : Выигрыш лотереи
+        * IntellectualActivity : Предоставление результатов интеллектуальной деятельности
+        * Payment : Платеж. Об авансе, задатке, предоплате, кредите, взносе в счет оплаты, пени, штрафе, вознаграждении, бонусе и ином аналогичном предмете расчета.
+        * AgentCommission : Агентское вознаграждение
+        * PropertyRight : Передача имущественных прав
+        * NonOperatingGain : Внереализационный доход
+        * InsurancePremium : Сумма расходов, уменьшающая сумму налога (авансовых платежей) в соответствии с пунктом 3.1 статьи 346.21 Налогового кодекса Российской Федерации.
+        * SalesTax : Сумма уплаченного торгового сбора.
+        * ResortFee : Курортный сбор.
+        * Composite : Составной предмет расчета
+        * Another : Иной предмет расчета
+
+    RefundItem:
+      type: object
+      description: Позиция чека для возврата
+      properties:
+        description:
+          type: string
+          maxLength: 128
+          description: |
+            Название позиции
+        quantity:
+          type: string
+          description: |
+            Количество товара по данной позиции
+        amount:
+          allOf:
+            - $ref: 'api-type-library.yaml#/components/schemas/MonetaryAmount'
+            - description: Цена товара с учетом всех скидок и наценок
+        vatCode:
+          $ref: '#/components/schemas/VatCode'
+      required:
+        - description
+        - quantity
+        - amount
+        - vatCode
+
+    PaymentMode:
+      type: string
+      enum:
+        - FullPrepayment
+        - PartialPrepayment
+        - Advance
+        - FullPayment
+        - PartialPayment
+        - Credit
+        - CreditPayment
+      description: |
+        * FullPrepayment : Предоплата 100%
+        * PartialPrepayment : Частичная предварительная оплата до момента передачи предмета расчета
+        * Advance : Аванс
+        * FullPayment : Полный расчет
+        * PartialPayment : Частичный расчет и кредит
+        * Credit : Передача в кредит
+        * CreditPayment : Оплата кредита
+
+    VatCode:
+      type: integer
+      format: int32
+      enum:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+      x-enum-varnames:
+        - WITHOUT_VAT
+        - VAT_ZERO_RATE
+        - VAT_REDUCED_RATE
+        - VAT_COMMON_RATE
+        - VAT_REDUCED_BILLING_RATE
+        - VAT_COMMON_BILLING_RATE
+      description: |
+        Идентификатор ставки НДС.
+        Возможные значения:
+        * 1: Без НДС
+        * 2: НДС чека по ставке 0%
+        * 3: НДС чека по ставке 10%
+        * 4: НДС чека по ставке 20%
+        * 5: НДС чека по расчетной ставке 10/110
+        * 6: НДС чека по расчетной ставке 20/120
+
+    Language:
+      type: string
+      enum:
+        - Ru
+        - En
+      description: |
+        * Ru : Русский язык (формат ISO 639-1)
+        * En : Английский язык  (формат ISO 639-1)
+
+  responses:
+    AuthenticationError:
+      description: |
+        Запрос не может быть выполнен — ошибка аутентификационных данных клиента.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                oneOf:
+                  - $ref: 'api-type-library.yaml#/components/schemas/AuthenticationTokenError'
+                discriminator:
+                  propertyName: type
+            required:
+              - error
+  parameters:
+
+    PassportAuthorization:
+      description: |
+        OAuth2 token выданный Яндекс.Паспорт в формате "Bearer [token]"
+      in: header
+      name: Passport-Authorization
+      required: false
+      schema:
+        type: string
+        externalDocs:
+          url: https://tech.site.ru/oauth/doc/dg/concepts/about-docpage/
+          description: OAuth в Яндексе
+
+    Authorization:
+      description: |
+        OAuth2 token выданный собственным центром авторизации в формате "Bearer [token]"
+      in: header
+      name: Authorization
+      required: false
+      schema:
+        type: string
+
+    ShopId:
+      name: shopId
+      in: query
+      required: true
+      description: Идентификатор магазина
+      schema:
+        $ref: 'domain.yaml#/components/schemas/ShopId'
+
+    LimitResponse:
+      name: limit
+      in: query
+      description: Ограничение на количество записей в выдаче. Если поле не задано, то подставится дефолтное значение = 10
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        example: 50
+
+    IdempotenceKey:
+      description: |
+        Ключ идемпотентности
+      in: header
+      name: Idempotence-Key
+      required: true
+      schema:
+        type: string
+        maxLength: 64
+        pattern: '[0-9a-zA-Z+-_.]{1,64}'
+        example: '2e1da982-1bb1-41f0-b9cf-758cc8bcf069'
+
+paths: { }

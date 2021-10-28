@@ -1,0 +1,62 @@
+openapi: "3.0.2"
+info:
+  version: "1.0.0"
+  title: PetStore API Project Template
+  description: |
+    # Шаблон спецификации - пример описания
+
+servers:
+  - url: https://hostname/template-api/v1
+
+paths:
+
+  /test:
+    get:
+      description: test
+      responses:
+        200:
+          description: ответ
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/Cache-Control'
+            Expires:
+              $ref: '#/components/headers/Expires'
+        304:
+          $ref: '#/components/responses/NotModified'
+
+components:
+  responses:
+    NotModified:
+      description: Запрос выполнен успешно. Данные не изменялись.
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
+        Cache-Control:
+          $ref: '#/components/headers/Cache-Control'
+        Expires:
+          $ref: '#/components/headers/Expires'
+  headers:
+    ETag:
+      schema:
+        type: string
+        example: 'W/\"b63802dff0dc93a2bc5af99c857a3f909aab95092face001b77ba6742cdb600e\"'
+      description: |
+        Версия (хеш от тела) текущего ответа [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+
+    Cache-Control:
+      description: |
+        Фиксированное значение: private, указание на то что данные должны быть сохранены в кэше клиента и не должны сохраняться на прокси-серверах.
+      schema:
+        type: string
+        enum:
+          - private
+
+    Expires:
+      description: |
+        Время, до достижении которого данные считаются действительными (https://tools.ietf.org/html/rfc7231#section-7.1.1.1).
+      schema:
+        type: string
+        format: date-time
+        example: 'Tue, 18 Dec 2018 16:12:28 GMT'

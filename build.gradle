@@ -1,21 +1,22 @@
 buildscript {
     apply from: 'project.gradle', to: buildscript
 }
-apply plugin: "yamoney-library-project-plugin"
+apply plugin: "ru.yoomoney.gradle.plugins.library-project-plugin"
 apply plugin: 'ru.yoomoney.gradle.plugins.kotlin-plugin'
 
-groupIdSuffix = "tools"
-artifactID = "yamoney-openapi-spec-bundler"
+javaModule {
+    spotbugsEnabled = false
+}
 
 dependencies {
 
+    implementation 'com.github.java-json-tools:json-schema-core:1.2.14',
+            'commons-io:commons-io:2.11.0',
+            'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.0'
 
-
-    implementation 'com.github.java-json-tools:json-schema-core:1.2.8',
-            'commons-io:commons-io:2.4',
-            'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.0'
 
     testImplementation 'junit:junit:4.12',
             "com.github.tomakehurst:wiremock:2.20.0"
-
 }
+
+artifactId = 'openapi-bundler'

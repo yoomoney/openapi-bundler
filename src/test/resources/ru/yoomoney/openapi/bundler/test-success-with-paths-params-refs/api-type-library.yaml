@@ -1,0 +1,234 @@
+openapi: "3.0.2"
+
+info:
+  version: 1.0.0
+  title: Подключаемые типы
+
+components:
+  schemas:
+    # phone
+    Phone:
+      description: Номер телефона в формате ITU-T E.164
+      type: string
+      pattern: '[0-9]{4,15}'
+      example: 79000000000
+      x-sensitive: true
+
+    # bank-card
+    BankCardPanFragment:
+      description: |
+        Неполный номер банковской карты.
+
+        Объект содержит в себе частичную информацию о номере банковской карты
+      properties:
+        first:
+          description: Первые шесть цифр карты
+          example: 410056
+          pattern: '[0-9]{6}'
+          type: string
+        last:
+          description: Последние четыре цифры карты
+          example: 5604
+          pattern: '[0-9]{4}'
+          type: string
+        length:
+          description: Общее количество цифр в номере карты
+          example: 16
+          format: int32
+          maximum: 19
+          minimum: 16
+          type: integer
+      required:
+        - first
+        - last
+        - length
+      type: object
+
+    # monetary
+    MonetaryAmount:
+      description: Сумма в выбранной валюте.
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+      required:
+        - value
+        - currency
+    Amount:
+      description: Десятичное число с фиксированной точкой в строковом представлении.
+      type: string
+      pattern: (\d+\.\d{2}|\d+)
+      example: 100.0
+    CurrencyCode:
+      description: Код валюты, ISO-4217 3-alpha currency symbol.
+      type: string
+      pattern: '[A-Z]{3}'
+      example: 'RUB'
+    After:
+      description: Токен запроса следующей страницы данных.
+      example: '01234567890ABCDEF'
+      type: string
+
+    # responses
+    ArgumentsSyntaxError:
+      title: ArgumentsSyntaxError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * Нарушен синтаксис запроса, запрос невозможно разобрать;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - SyntaxError
+          example: 'SyntaxError'
+      required:
+        - type
+    ArgumentsParametersError:
+      title: ArgumentsParametersError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * Параметры запроса отсутствуют или имеют недопустимое значение;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - IllegalParameters
+          example: 'IllegalParameters'
+        parameterNames:
+          description: Список наименований и путей параметров, содержащих некорректные значения. Присутствует при type=IllegalParameters.
+          type: array
+          items:
+            type: string
+            example: 'amount'
+            description: |
+              Имя параметра включая его полный путь в JSON документе. Поле вложенного объекта указывается через точку. Номер элемента списка указывается в квадратных скобках.
+              Примеры:
+
+                * currency
+                * amount.value
+                * options[0].amount.value
+      required:
+        - type
+        - parameterNames
+    ArgumentsHeadersError:
+      title: ArgumentsHeadersError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * HTTP-заголовоки запроса отсутствуют или имеют недопустимое значение;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - IllegalHeaders
+          example: 'IllegalHeaders'
+        headerNames:
+          description: Список наименований заголовков запроса, содержащих некорректные значения. Присутствует при type=IllegalHeaders.
+          type: array
+          items:
+            type: string
+            example: 'Authorization'
+      required:
+        - type
+        - headerNames
+    AuthenticationTokenError:
+      title: AuthenticationTokenError
+      description: |
+        Запрос не может быть выполнен — ошибка аутентификационных данных клиента.
+        * InvalidToken - Отсутствует или недействительна OAuth2 авторизация кошелька.
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+            - InvalidToken
+          example: 'InvalidToken'
+      required:
+        - type
+  parameters:
+    YoomoneyUserAgent:
+      in: header
+      name: User-Agent
+      required: true
+      description: Мобильные приложения и публичные SDK Юmoney, умеют формировать UserAgent в определенном формате. Формат <application name>.<target platform>\<application version> <running platform>\<OS version> <device class>
+      schema:
+        type: string
+        pattern: (.+)\/([0-9.]+)\s(.+)\/([0-9.]+)\s(.+)
+        example: 'YooMoney.Android/4.17.1 Android/8.0 Phone'
+      examples:
+        example1:
+          value: YooMoney.Android/4.17.1 Android/8.0 Phone
+          summary: YooMoney version 4.17.1 for Android used with Android Phone version 8.0
+        example2:
+          value: YooKassa.Client.iOS/0.1 iOS/13.5 Phone
+          summary: YooKassa.Client version 0.1 for iOS used with iOS Phone version 13.5
+        example3:
+          value: YooKassa.SDK.Client.iOS/5.0.0 iOS/14.1 Phone
+          summary: YooKassa.SDK version 5.0.0 for iOS used with iOS version 14.1
+  responses:
+    # responses
+    ArgumentsError:
+      description: Запрос с указанными параметрами не может быть выполнен.
+      content:
+        application/json:
+          schema:
+            title: ArgumentsError
+            type: object
+            properties:
+              error:
+                title: Error
+                oneOf:
+                  - $ref: '#/components/schemas/ArgumentsSyntaxError'
+                  - $ref: '#/components/schemas/ArgumentsParametersError'
+                  - $ref: '#/components/schemas/ArgumentsHeadersError'
+                discriminator:
+                  propertyName: type
+            required:
+              - error
+
+    TechnicalError:
+      description: |
+        Техническая ошибка. Результат выполнения запроса неизвестен.
+        Клиенту следует повторить запрос с теми же аргументами спустя указанное время ожидания.
+
+        Коды ошибок:
+        * TechnicalError - Техническая ошибка сервиса.
+        * ServiceUnavailable - Сервис временно недоступен.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  type:
+                    description: Код ошибки
+                    type: string
+                    enum:
+                      - TechnicalError
+                      - ServiceUnavailable
+                    example: 'TechnicalError'
+                  retryAfter:
+                    description: Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос.
+                    type: integer
+                    format: int64
+                    example: 5000
+                    minimum: 10
+                  description:
+                    description: Дополнительное текстовое пояснение причины ошибки. Может присутствовать в некоторых случаях.
+                    type: string
+                    example: 'Съешь еще этих мягких французских булок'
+                required:
+                  - type
+            required:
+              - error
+paths: { }

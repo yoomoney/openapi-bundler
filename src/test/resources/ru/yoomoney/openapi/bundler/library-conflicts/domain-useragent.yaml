@@ -1,0 +1,28 @@
+# Домен рабоыт с UserAgent
+info:
+  version: "1.0.0"
+
+components:
+  parameters:
+    YoomoneyMobileUserAgent:
+      in: header
+      name: User-Agent
+      required: false
+      pattern: "(.+)\\/([0-9.]+)\\s(.+)\\/([0-9.]+)\\s(.+)"
+      description: >-
+        Информация о приложении или SDK, его версии и платформе устройства.
+
+        Формат: \<application name>.\<target platform>/\<application version> \<running platform>/\<OS version> \<device class>
+      schema:
+        type: string
+        example: 'Yoomoney.Money.Android/4.17.1 Android/8.0 Phone'
+      examples:
+        example1:
+          value: 'Yoomoney.Money.Android/4.17.1 Android/8.0 Phone'
+          summary:  Yoomoney.Money version 4.17.1 for Android used with Android Phone version 8.1
+        example2:
+          value: 'Yoomoney.Fines.iOS/2.1.1 iOS/11.3 Tablet'
+          summary: Yoomoney.Fines version 2.1.1 for iOS used with iOS Tablet version 11.3
+        example3:
+          value: 'Yoomoney.Money.Android/4.17.1 Windows/10.1709 Phone'
+          summary: Yoomoney.Money version 4.17.1 for Android used with Windows Phone version 10.1709
