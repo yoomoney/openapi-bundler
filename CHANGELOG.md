@@ -1,3 +1,6 @@
+### NEXT_VERSION_TYPE=MAJOR|MINOR|PATCH
+### NEXT_VERSION_DESCRIPTION_BEGIN
+### NEXT_VERSION_DESCRIPTION_END
 ## [3.0.0](https://github.com/yoomoney/openapi-bundler/pull/1) (28-10-2021)
 
 * Корневой пакет теперь `ru.yoomoney.openapi.bundler`
